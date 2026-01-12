@@ -1,0 +1,43 @@
+name = "eisenhower-task-manager"
+main = ".svelte-kit/cloudflare/worker.js"
+compatibility_date = "2024-01-01"
+compatibility_flags = ["nodejs_compat"]
+
+[assets]
+directory = ".svelte-kit/output/client"
+binding = "ASSETS"
+
+[env.production]
+name = "eisenhower-task-manager"
+
+[[env.production.d1_databases]]
+binding = "DB"
+database_name = "eisenhower-task-manager-db"
+database_id = ""
+
+[[env.production.r2_buckets]]
+binding = "R2"
+bucket_name = "eisenhower-task-manager"
+
+[[env.production.kv_namespaces]]
+binding = "KV"
+id = ""
+
+[env.development]
+name = "eisenhower-task-manager-dev"
+
+[[env.development.d1_databases]]
+binding = "DB"
+database_name = "eisenhower-task-manager-db-dev"
+database_id = ""
+
+[[env.development.r2_buckets]]
+binding = "R2"
+bucket_name = "eisenhower-task-manager-dev"
+
+[[env.development.kv_namespaces]]
+binding = "KV"
+id = ""
+
+[vars]
+ENVIRONMENT = "development"
