@@ -7,5 +7,46 @@ main = ".svelte-kit/cloudflare/_worker.js"
 binding = "ASSETS"
 directory = ".svelte-kit/cloudflare"
 
-workers_dev = true
-preview_urls = true
+[observability]
+enabled = true
+head_sampling_rate = 1
+
+[env.production]
+name = "zapdo"
+[[env.production.routes]]
+pattern = "zapdo.onichandame.com"
+custom_domain = true
+
+#[[env.production.d1_databases]]
+#binding = "DB"
+#database_name = "zapdo-db"
+#database_id = "4bac8877-5a26-45f2-8a41-2c96c6b3a0a0"
+#migrations_dir = "migrations"
+#
+#[[env.production.r2_buckets]]
+#binding = "R2"
+#bucket_name = "zapdo"
+#
+#[[env.production.kv_namespaces]]
+#binding = "KV"
+#id = "40eb4de4d58c496783264a9a953cc8b8"
+
+[env.development]
+name = "zapdo-dev"
+[[env.development.routes]]
+pattern = "zapdo-dev.onichandame.com"
+custom_domain = true
+
+#[[env.development.d1_databases]]
+#binding = "DB"
+#database_name = "zapdo-db-dev"
+#database_id = "3f5e7b3b-2c2a-4e08-981e-7bae3dcbe4ca"
+#migrations_dir = "migrations"
+#
+#[[env.development.r2_buckets]]
+#binding = "R2"
+#bucket_name = "zapdo-dev"
+#
+#[[env.development.kv_namespaces]]
+#binding = "KV"
+#id = "27b09115ef66447abb0437bd4d7d5389"
