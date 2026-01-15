@@ -13,8 +13,8 @@
     "types": "wrangler types",
     "db:push": "drizzle-kit push",
     "db:generate": "drizzle-kit generate",
-    "db:migrate:dev": "wrangler d1 migrations apply zapdo-db-dev --remote",
-    "db:migrate:prod": "wrangler d1 migrations apply zapdo-db --remote",
+    "db:migrate:dev": "wrangler d1 migrations apply zapdo-db-dev --env development --remote",
+    "db:migrate:prod": "wrangler d1 migrations apply zapdo-db --env production --remote",
     "db:studio": "drizzle-kit studio"
   },
   "devDependencies": {
