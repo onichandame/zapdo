@@ -41,6 +41,9 @@ jobs:
       - name: Build application
         run: npm run build
 
+      - name: Test migrations on local database
+        run: wrangler d1 migrations apply zapdo-db-dev --local --env development
+
       - name: Run database migrations
         uses: cloudflare/wrangler-action@v3
         with:
