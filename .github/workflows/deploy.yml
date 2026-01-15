@@ -13,6 +13,10 @@ jobs:
     if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
     environment:
       name: ${{ github.ref == 'refs/heads/main' && 'production' || 'development' }}
+    env:
+      ENV_NAME: ${{ github.ref == 'refs/heads/main' && 'production' || 'development' }}
+      DB_NAME: ${{ github.ref == 'refs/heads/main' && 'zapdo-db' || 'zapdo-db-dev' }}
+      DEPLOY_URL: ${{ github.ref == 'refs/heads/main' && 'https://zapdo.onichandame.com' || 'https://zapdo-dev.onichandame.com' }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -46,30 +50,24 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: d1 migrations apply ${{ github.ref == 'refs/heads/main' && 'zapdo-db' || 'zapdo-db-dev' }} --local --env ${{ github.ref == 'refs/heads/main' && 'production' || 'development' }}
+          command: d1 migrations apply ${{ env.DB_NAME }} --local --env ${{ env.ENV_NAME }}
 
       - name: Run database migrations
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: d1 migrations apply ${{ github.ref == 'refs/heads/main' && 'zapdo-db' || 'zapdo-db-dev' }} --env ${{ github.ref == 'refs/heads/main' && 'production' || 'development' }} --remote
+          command: d1 migrations apply ${{ env.DB_NAME }} --env ${{ env.ENV_NAME }} --remote
 
       - name: Deploy to Cloudflare Workers
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: deploy --env ${{ github.ref == 'refs/heads/main' && 'production' || 'development' }}
+          command: deploy --env ${{ env.ENV_NAME }}
 
       - name: Verify deployment
         run: |
-          if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
-            DEPLOY_URL="https://zapdo.onichandame.com"
-          else
-            DEPLOY_URL="https://zapdo-dev.onichandame.com"
-          fi
-          
           echo "🚀 Deployed to: $DEPLOY_URL"
           
           for i in {1..10}; do
