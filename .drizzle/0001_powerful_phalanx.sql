@@ -12,8 +12,8 @@ CREATE TABLE `oauth_account` (
 	FOREIGN KEY (`user_id`) REFERENCES `user`(`id`) ON UPDATE no action ON DELETE cascade
 );
 --> statement-breakpoint
-CREATE INDEX `provider_account_idx` ON `oauth_account` (`provider`,`provider_account_id`);--> statement-breakpoint
-CREATE INDEX `user_id_idx` ON `oauth_account` (`user_id`);--> statement-breakpoint
+CREATE INDEX `oauth_account_provider_account_idx` ON `oauth_account` (`provider`,`provider_account_id`);--> statement-breakpoint
+CREATE INDEX `oauth_account_user_id_idx` ON `oauth_account` (`user_id`);--> statement-breakpoint
 CREATE TABLE `session` (
 	`id` text PRIMARY KEY NOT NULL,
 	`user_id` text NOT NULL,
@@ -24,9 +24,9 @@ CREATE TABLE `session` (
 );
 --> statement-breakpoint
 CREATE UNIQUE INDEX `session_session_token_unique` ON `session` (`session_token`);--> statement-breakpoint
-CREATE INDEX `session_token_idx` ON `session` (`session_token`);--> statement-breakpoint
-CREATE INDEX `user_id_idx` ON `session` (`user_id`);--> statement-breakpoint
-CREATE INDEX `expires_at_idx` ON `session` (`expires_at`);--> statement-breakpoint
+CREATE INDEX `session_session_token_idx` ON `session` (`session_token`);--> statement-breakpoint
+CREATE INDEX `session_user_id_idx` ON `session` (`user_id`);--> statement-breakpoint
+CREATE INDEX `session_expires_at_idx` ON `session` (`expires_at`);--> statement-breakpoint
 ALTER TABLE `user` ADD `avatar_url` text;--> statement-breakpoint
 ALTER TABLE `user` ADD `email_verified` integer DEFAULT true NOT NULL;--> statement-breakpoint
 ALTER TABLE `user` ADD `created_at` text NOT NULL;--> statement-breakpoint
