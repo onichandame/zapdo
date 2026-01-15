@@ -70,15 +70,15 @@ jobs:
       - name: Build application
         run: npm run build
 
-#      - name: Run database migrations
-#        run: |
-#          if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
-#            echo "Running production migrations..."
-#            npm run db:migrate:prod
-#          else
-#            echo "Running development migrations..."
-#            npm run db:migrate:dev
-#          fi
+      - name: Run database migrations
+        run: |
+          if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            echo "Running production migrations..."
+            npm run db:migrate:prod
+          else
+            echo "Running development migrations..."
+            npm run db:migrate:dev
+          fi
 
       - name: Deploy to Cloudflare Workers
         uses: cloudflare/wrangler-action@v3

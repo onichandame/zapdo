@@ -13,7 +13,7 @@
     "types": "wrangler types",
     "db:push": "drizzle-kit push",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate",
+    "db:migrate": "wrangler d1 migrations apply zapdo-db-dev --remote",
     "db:studio": "drizzle-kit studio"
   },
   "devDependencies": {

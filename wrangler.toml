@@ -37,12 +37,12 @@ name = "zapdo-dev"
 pattern = "zapdo-dev.onichandame.com"
 custom_domain = true
 
-#[[env.development.d1_databases]]
-#binding = "DB"
-#database_name = "zapdo-db-dev"
-#database_id = "3f5e7b3b-2c2a-4e08-981e-7bae3dcbe4ca"
-#migrations_dir = "migrations"
-#
+[[env.development.d1_databases]]
+binding = "DB"
+database_name = "zapdo-db-dev"
+database_id = "a3ea71ab-7807-4e96-9a26-5a36ad603f10"
+migrations_dir = "migrations"
+
 #[[env.development.r2_buckets]]
 #binding = "R2"
 #bucket_name = "zapdo-dev"
