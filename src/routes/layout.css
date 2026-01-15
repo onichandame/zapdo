@@ -7,7 +7,7 @@
     --color-background: #eeeae3;
     --color-foreground: #3c402b;
 
-    --color-card: #343330;
+    --color-card: #3e3d3a;
     --color-card-foreground: #ffffff;
 
     --color-popover: #ffffff;
@@ -19,9 +19,8 @@
     --color-secondary: #3e3d3a;
     --color-secondary-foreground: #ffffff;
 
-    /* below has not been audited, avoid using them. if use them plz add comment in code */
-    --color-muted: 240 3.7% 15.9%;
-    --color-muted-foreground: 240 5% 64.9%;
+    --color-muted: #4a4a48;
+    --color-muted-foreground: #c9c5bf;
 
     --color-accent: #3e3d3a;
     --color-accent-foreground: #ffffff;
@@ -30,6 +29,7 @@
     --color-destructive-foreground: 0 0% 98%;
 
     --color-border: 240 3.7% 15.9%;
+    --shadow-card: 2px 2px 0 rgba(60, 64, 43, 0.4);
     --color-input: 240 3.7% 15.9%;
     --color-ring: 240 4.9% 83.9%;
 
