@@ -75,6 +75,7 @@ export type NewUser = typeof user.$inferInsert;
 
 export type OAuthAccount = typeof oauthAccount.$inferSelect;
 export type NewOAuthAccount = typeof oauthAccount.$inferInsert;
+export type OAuthProvider = 'google' | 'github';
 
 export type Session = typeof session.$inferSelect;
 export type NewSession = typeof session.$inferInsert;
