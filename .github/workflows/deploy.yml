@@ -42,7 +42,7 @@ jobs:
         run: npm run build
 
       - name: Test migrations on local database
-        run: wrangler d1 migrations apply zapdo-db-dev --local --env development
+        run: wrangler d1 migrations apply ${{ github.ref == 'refs/heads/main' && 'zapdo-db' || 'zapdo-db-dev' }} --local --env ${{ github.ref == 'refs/heads/main' && 'production' || 'development' }}
 
       - name: Run database migrations
         uses: cloudflare/wrangler-action@v3
