@@ -20,15 +20,14 @@ jobs:
           node-version: '25.2.1'
           cache: 'npm'
 
-      - name: Cache dependencies and build
+      - name: Cache
         uses: actions/cache@v4
         with:
           path: |
             ~/.npm
-            .svelte-kit
           key: ${{ runner.os }}-build-${{ hashFiles('**/package-lock.json') }}
           restore-keys: |
-            ${{ runner.os }}-build-
+            ${{ runner.os }}-npm-
 
       - name: Install dependencies
         run: npm ci
@@ -56,15 +55,14 @@ jobs:
           node-version: '25.2.1'
           cache: 'npm'
 
-      - name: Cache dependencies
+      - name: Cache
         uses: actions/cache@v4
         with:
           path: |
             ~/.npm
-            .wrangler
-          key: ${{ runner.os }}-wrangler-${{ hashFiles('**/wrangler.toml') }}
+          key: ${{ runner.os }}-build-${{ hashFiles('**/package-lock.json') }}
           restore-keys: |
-            ${{ runner.os }}-wrangler-
+            ${{ runner.os }}-npm-
 
       - name: Install dependencies
         run: npm ci
