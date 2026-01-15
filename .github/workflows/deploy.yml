@@ -71,14 +71,11 @@ jobs:
         run: npm run build
 
       - name: Run database migrations
-        run: |
-          if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
-            echo "Running production migrations..."
-            npm run db:migrate:prod
-          else
-            echo "Running development migrations..."
-            npm run db:migrate:dev
-          fi
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: d1 migrations apply ${{ github.ref == 'refs/heads/main' && 'zapdo-db' || 'zapdo-db-dev' }} --env ${{ github.ref == 'refs/heads/main' && 'production' || 'development' }} --remote
 
       - name: Deploy to Cloudflare Workers
         uses: cloudflare/wrangler-action@v3
