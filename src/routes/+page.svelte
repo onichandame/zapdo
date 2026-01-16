@@ -183,13 +183,13 @@
                 type="text"
                 placeholder="Search tasks..."
                 bind:value={searchQuery}
-                class="search-input w-full px-4 py-2.5 bg-card rounded-lg border border-border text-sm text-card-foreground placeholder:text-muted-foreground"
+                class="search-input w-full px-4 py-2.5 bg-primary text-primary-foreground rounded-lg border border-border text-sm placeholder:text-muted-foreground"
             />
         </div>
         <div class="filter-group flex gap-3">
             <select
                 bind:value={filterStatus}
-                class="filter-select px-4 py-2.5 bg-card rounded-lg border border-border text-sm text-card-foreground cursor-pointer"
+                class="filter-select px-4 py-2.5 bg-primary text-primary-foreground rounded-lg border border-border text-sm cursor-pointer"
             >
                 <option value="all">All Status</option>
                 <option value="pending">Pending</option>
@@ -199,7 +199,7 @@
             </select>
             <select
                 bind:value={filterProject}
-                class="filter-select px-4 py-2.5 bg-card rounded-lg border border-border text-sm text-card-foreground cursor-pointer"
+                class="filter-select px-4 py-2.5 bg-primary text-primary-foreground rounded-lg border border-border text-sm cursor-pointer"
             >
                 <option value="all">All Projects</option>
                 {#each projects as project}
