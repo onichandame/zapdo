@@ -1,5 +1,5 @@
 import { index, integer, sqliteTable, text } from 'drizzle-orm/sqlite-core';
-import { relations } from 'drizzle-orm'
+import { relations } from 'drizzle-orm';
 
 export const user = sqliteTable('user', {
   id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
@@ -40,12 +40,10 @@ export const session = sqliteTable(
 		userId: text('user_id')
 			.notNull()
 			.references(() => user.id, { onDelete: 'cascade' }),
-		sessionToken: text('session_token').notNull().unique(),
 		expiresAt: text('expires_at').notNull(),
 		createdAt: text('created_at').notNull().$defaultFn(() => new Date().toISOString())
 	},
 	(table) => [
-		index('session_session_token_idx').on(table.sessionToken),
 		index('session_user_id_idx').on(table.userId),
 		index('session_expires_at_idx').on(table.expiresAt)
 	]

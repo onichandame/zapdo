@@ -11,6 +11,11 @@ directory = ".svelte-kit/cloudflare"
 enabled = true
 head_sampling_rate = 1
 
+[vars]
+GOOGLE_CLIENT_ID = ""
+GOOGLE_CALLBACK_URL = ""
+GOOGLE_CLIENT_SECRET = ""
+
 [env.production]
 name = "zapdo"
 [[env.production.routes]]

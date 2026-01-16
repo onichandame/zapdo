@@ -1,4 +1,5 @@
 import type * as schema from '$lib/server/db/schema';
+import type { Database } from '$lib/server/db';
 
 // See https://svelte.dev/docs/kit/types#app.d.ts
 // for information about these interfaces
@@ -12,12 +13,11 @@ declare global {
     }
 
     interface Locals {
-      user?: {
+      session?: {
         id: string;
-        email: string;
-        name: string;
+        user: schema.User,
       };
-      db: DrizzleD1Database<typeof schema>;
+      db: Database;
     }
 
     // interface Error {}
