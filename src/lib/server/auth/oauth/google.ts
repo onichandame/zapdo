@@ -5,6 +5,16 @@ const GOOGLE_AUTH_URL = 'https://accounts.google.com/o/oauth2/v2/auth';
 const GOOGLE_TOKEN_URL = 'https://oauth2.googleapis.com/token';
 const GOOGLE_USERINFO_URL = 'https://www.googleapis.com/oauth2/v2/userinfo';
 
+type GoogleUserInfo = {
+  id: string
+  email: string
+  verified_email: boolean,
+  name: string,
+  given_name: string,
+  family_name: string,
+  picture: string
+}
+
 export class CloudflareGoogleOAuth extends OAuthProviderBase {
   readonly provider = 'google' as const;
   protected readonly authUrl = GOOGLE_AUTH_URL;
@@ -65,7 +75,8 @@ export class CloudflareGoogleOAuth extends OAuthProviderBase {
       throw new Error(`Failed to get Google user info: ${error}`);
     }
 
-    return response.json() as Promise<UserInfo>;
+    const userInfo: GoogleUserInfo = await response.json()
+    return { email: userInfo.email, email_verified: userInfo.verified_email, name: userInfo.name, sub: userInfo.id, picture: userInfo.picture }
   }
 }
 

@@ -1,16 +1,13 @@
-import { redirect } from '@sveltejs/kit';
-import type { RequestHandler } from './$types';
-import { deleteSession, clearSessionCookie } from '$lib/server/auth';
+import { redirect, type RequestHandler } from '@sveltejs/kit';
+import { deleteSession } from '$lib/server/auth/session';
 
 export const POST: RequestHandler = async ({ request, locals, cookies }) => {
   const sessionId = cookies.get('session_token');
 
   if (sessionId) {
-    // Delete session from database
     await deleteSession(locals.db, sessionId);
   }
 
-  // Clear session cookie
   cookies.set('session_token', '', {
     path: '/',
     httpOnly: true,
@@ -26,11 +23,9 @@ export const GET: RequestHandler = async ({ request, locals, cookies }) => {
   const sessionId = cookies.get('session_token');
 
   if (sessionId) {
-    // Delete session from database
     await deleteSession(locals.db, sessionId);
   }
 
-  // Clear session cookie
   cookies.set('session_token', '', {
     path: '/',
     httpOnly: true,
