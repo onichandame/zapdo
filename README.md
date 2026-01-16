@@ -4,7 +4,7 @@ ZapDo is a privacy-focused task manager designed to help you prioritize tasks ef
 
 ## Features
 
-- **Dynamic Task Prioritization**: Visualize your tasks on a Cartesian coordinate system with 'Importance' on the x-axis and 'Urgency' on the y-axis. This allows for a more fluid and precise way to prioritize.
+- **Intelligent Task Management**: Organize and prioritize your tasks with smart filtering, categorization, and status tracking for optimal productivity.
 - **Privacy-First Design**: Emphasizing end-to-end encryption, ZapDo ensures your data never leaves your device unencrypted, guaranteeing your tasks and information remain private and secure.
 
 ## Usage
@@ -14,19 +14,10 @@ ZapDo is a privacy-focused task manager designed to help you prioritize tasks ef
 2. **Log In**: Use your credentials to log in and access your dashboard.
 
 ### Managing Tasks
-- **Add Tasks**: Click the "Add Task" button to create a new task. It will appear on the coordinate plane.
-- **Prioritize Tasks**: Simply move tasks around the Cartesian coordinate plane. Dragging a task horizontally changes its 'Importance', and dragging it vertically changes its 'Urgency'.
+- **Add Tasks**: Click the "Add Task" button to create a new task.
+- **Prioritize Tasks**: Use the priority system to categorize tasks as urgent, high, medium, or low priority.
 - **Complete Tasks**: Mark tasks as complete to track your progress.
-
-### The Coordinate System
-The plane is divided into four familiar quadrants:
-
-- **Top-Right (High Importance & High Urgency)**: Tasks that require immediate attention.
-- **Top-Left (Low Importance & High Urgency)**: Tasks that are urgent but may not contribute to long-term goals.
-- **Bottom-Right (High Importance & Low Urgency)**: Tasks that are important but can be scheduled for later.
-- **Bottom-Left (Low Importance & Low Urgency)**: Tasks that can be delegated or eliminated.
-
-By allowing you to place tasks anywhere on this plane, you get a more granular and intuitive feel for your priorities than with rigid categories.
+- **Filter and Search**: Use powerful filtering and search capabilities to find and manage your tasks efficiently.
 
 ## Contributing
 
