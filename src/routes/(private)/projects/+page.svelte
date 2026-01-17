@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Folder, Plus, Trash, X } from "phosphor-svelte";
+  import { Folder, Plus, Trash, X, Star, Rocket, ChartBar, Lightbulb, Target, Book, GearSix } from "phosphor-svelte";
   import { enhance } from "$app/forms";
   import type { Attachment } from "svelte/attachments";
 
@@ -198,7 +198,23 @@
           class="w-12 h-12 rounded-md flex items-center justify-center"
           style="background-color: {project.color}20; color: {project.color}"
         >
-          <Folder size={24} weight="fill" />
+          {#if project.icon === "star"}
+            <Star size={24} weight="fill" />
+          {:else if project.icon === "rocket"}
+            <Rocket size={24} weight="fill" />
+          {:else if project.icon === "chart"}
+            <ChartBar size={24} weight="fill" />
+          {:else if project.icon === "lightbulb"}
+            <Lightbulb size={24} weight="fill" />
+          {:else if project.icon === "target"}
+            <Target size={24} weight="fill" />
+          {:else if project.icon === "book"}
+            <Book size={24} weight="fill" />
+          {:else if project.icon === "gear"}
+            <GearSix size={24} weight="fill" />
+          {:else}
+            <Folder size={24} weight="fill" />
+          {/if}
         </div>
         <div class="flex-1 min-w-0">
           <h2 class="text-xl font-semibold text-foreground m-0">
