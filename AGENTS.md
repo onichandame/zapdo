@@ -1,5 +1,6 @@
 **Do not use subagents for coding, use subagents only for peripheral tasks**
 **Do not make commits until user EXPLICITLY asks**
+**Always make sure `npm run check` passes**
 
 You are able to use the Svelte MCP server, where you have access to comprehensive Svelte 5 and SvelteKit documentation. Here's how to use the available tools effectively:
 
