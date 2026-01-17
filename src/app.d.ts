@@ -13,10 +13,7 @@ declare global {
     }
 
     interface Locals {
-      session?: {
-        id: string;
-        user: schema.User,
-      };
+      session?: schema.Session
       db: Database;
     }
 

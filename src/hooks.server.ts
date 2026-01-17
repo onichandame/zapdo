@@ -17,17 +17,7 @@ const initSession: Handle = async ({ event, resolve }) => {
     const session = await validateSession(event.locals.db, sessionId);
 
     if (session) {
-      const user = await event.locals.db.query.user.findFirst({
-        where: (user, { eq }) => eq(user.id, session.userId)
-      }
-      );
-
-      if (user) {
-        event.locals.session = {
-          id: session.id,
-          user
-        };
-      }
+      event.locals.session = session;
     }
   }
 

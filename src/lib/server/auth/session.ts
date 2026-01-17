@@ -55,9 +55,10 @@ export async function createSession(
 export async function validateSession(
   db: Database,
   sessionId: string
-): Promise<schema.Session | null> {
+) {
   const session = await db.query.session.findFirst({
     where: (session, { eq }) => eq(session.id, sessionId)
+    , with: { user: true }
   });
 
   if (!session) {
