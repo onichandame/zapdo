@@ -22,8 +22,8 @@
     --color-muted: #4a4a48;
     --color-muted-foreground: #c9c5bf;
 
-    --color-accent: #3e3d3a;
-    --color-accent-foreground: #ffffff;
+    --color-accent: #bcadaf;
+    --color-accent-foreground: rgb(60, 64, 43);
 
     --color-destructive: 0 62.8% 30.6%;
     --color-destructive-foreground: 0 0% 98%;

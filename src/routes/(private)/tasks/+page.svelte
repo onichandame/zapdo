@@ -89,10 +89,10 @@
     }
 </script>
 
-<div class="page text-foreground max-w-[900px] mx-auto p-8">
+<div class="page text-foreground">
     <header class="header flex justify-between items-start mb-8">
         <div class="header-left flex flex-col gap-1">
-            <h1 class="title text-[1.75rem] font-bold m-0 text-foreground">
+            <h1 class="title text-3xl font-bold m-0 text-foreground">
                 Tasks
             </h1>
             <span class="subtitle text-sm"

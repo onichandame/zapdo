@@ -58,7 +58,7 @@ export async function validateSession(
 ) {
   const session = await db.query.session.findFirst({
     where: (session, { eq }) => eq(session.id, sessionId)
-    , with: { user: true }
+    , with: { user: { with: { oauthAccounts: true } } }
   });
 
   if (!session) {
