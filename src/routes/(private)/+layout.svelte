@@ -1,8 +1,13 @@
 <script lang="ts">
   import favicon from "$lib/assets/favicon.svg";
   import { StarFour, Gear, UserCircle, Warehouse } from "phosphor-svelte";
+  import { page } from "$app/state";
 
   let { children } = $props();
+
+  function isActive(path: string): boolean {
+    return page.url.pathname.startsWith(path);
+  }
 </script>
 
 <svelte:head><link rel="icon" href={favicon} /></svelte:head>
@@ -33,21 +38,21 @@
       <a
         href="/tasks"
         title="Tasks"
-        class="p-2 rounded-lg hover:bg-accent hover:text-accent-foreground transition-colors"
+        class="p-2 rounded-lg hover:bg-accent hover:text-accent-foreground transition-colors {isActive('/tasks') ? 'bg-accent text-accent-foreground' : ''}"
       >
         <StarFour size={24} />
       </a>
       <a
         href="/projects"
         title="Projects"
-        class="p-2 rounded-lg hover:bg-accent hover:text-accent-foreground transition-colors"
+        class="p-2 rounded-lg hover:bg-accent hover:text-accent-foreground transition-colors {isActive('/projects') ? 'bg-accent text-accent-foreground' : ''}"
       >
         <Warehouse size={24} />
       </a>
       <a
         href="/profile"
         title="Profile"
-        class="p-2 rounded-lg hover:bg-accent hover:text-accent-foreground transition-colors"
+        class="p-2 rounded-lg hover:bg-accent hover:text-accent-foreground transition-colors {isActive('/profile') ? 'bg-accent text-accent-foreground' : ''}"
       >
         <UserCircle size={24} />
       </a>
