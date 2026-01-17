@@ -18,6 +18,14 @@
   let editProjectIcon = $state("folder");
   let editFormError = $state("");
 
+  // Create project state
+  let isCreating = $state(false);
+  let createProjectName = $state("");
+  let createProjectDescription = $state("");
+  let createProjectColor = $state("#3b82f6");
+  let createProjectIcon = $state("folder");
+  let createFormError = $state("");
+
   // Create attachment functions
   const deleteClickOutside: Attachment<HTMLElement> = (node) => {
     const handleClick = (event: MouseEvent) => {
@@ -47,9 +55,25 @@
     };
   };
 
+  const createClickOutside: Attachment<HTMLElement> = (node) => {
+    const handleClick = (event: MouseEvent) => {
+      if (node && !node.contains(event.target as Node)) {
+        cancelCreate();
+      }
+    };
+
+    document.addEventListener("click", handleClick, true);
+
+    return () => {
+      document.removeEventListener("click", handleClick, true);
+    };
+  };
+
   $effect(() => {
     if (form?.error) {
-      if (isEditing) {
+      if (isCreating) {
+        createFormError = form.error;
+      } else if (isEditing) {
         editFormError = form.error;
       } else {
         // Handle delete errors
@@ -90,12 +114,28 @@
     isEditing = false;
   }
 
+  function showCreateDialog() {
+    isCreating = true;
+    createProjectName = "";
+    createProjectDescription = "";
+    createProjectColor = "#3b82f6";
+    createProjectIcon = "folder";
+    createFormError = "";
+  }
+
+  function cancelCreate() {
+    isCreating = false;
+    createFormError = "";
+  }
+
   // Handle Escape key to close dialogs
   $effect(() => {
-    if (isEditing || deleteProjectId) {
+    if (isCreating || isEditing || deleteProjectId) {
       const handleEscape = (e: KeyboardEvent) => {
         if (e.key === "Escape") {
-          if (isEditing) {
+          if (isCreating) {
+            cancelCreate();
+          } else if (isEditing) {
             cancelEdit();
           } else if (deleteProjectId) {
             cancelDelete();
@@ -118,13 +158,13 @@
 {#if data?.projects && data.projects.length === 0}
   <div class="text-center py-12">
     <div class="text-muted-foreground mb-4">No projects yet</div>
-    <a
-      href="/projects/new"
-      class="flex items-center gap-3 px-6 py-3 bg-primary text-primary-foreground rounded-lg border border-border hover:bg-accent hover:text-accent-foreground transition-colors"
+    <button
+      class="flex items-center gap-3 px-6 py-3 bg-primary text-primary-foreground rounded-lg border border-border hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer"
+      onclick={showCreateDialog}
     >
       <Plus size={20} />
       <span>Create Your First Project</span>
-    </a>
+    </button>
   </div>
 {:else}
   <div class="space-y-4">
@@ -192,13 +232,13 @@
   </div>
 
   <div class="mt-8">
-    <a
-      href="/projects/new"
-      class="flex items-center gap-3 px-6 py-3 bg-primary text-primary-foreground rounded-lg border border-border hover:bg-accent hover:text-accent-foreground transition-colors"
+    <button
+      class="flex items-center gap-3 px-6 py-3 bg-primary text-primary-foreground rounded-lg border border-border hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer"
+      onclick={showCreateDialog}
     >
       <Plus size={20} />
       <span>Create New Project</span>
-    </a>
+    </button>
   </div>
 {/if}
 
@@ -261,7 +301,7 @@
           <input type="hidden" name="projectId" value={deleteProjectId} />
           <button
             type="submit"
-            class="flex-1 px-4 py-2.5 bg-destructive text-destructive-foreground rounded-lg border border-destructive font-medium transition-colors hover:bg-[#ef4444] hover:text-white disabled:opacity-50 cursor-pointer"
+            class="flex-1 px-4 py-2.5 bg-destructive text-destructive-foreground rounded-lg border border-border font-medium transition-colors hover:bg-[#ef4444] hover:text-white disabled:opacity-50 cursor-pointer"
             disabled={isDeleting}
           >
             {#if isDeleting}
@@ -277,6 +317,162 @@
           </button>
         </form>
       </div>
+    </div>
+  </div>
+{/if}
+
+{#if isCreating}
+  <div
+    class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+  >
+    <div
+      class="bg-primary text-primary-foreground rounded-lg border border-border shadow-card max-w-md w-full p-6"
+      {@attach createClickOutside}
+    >
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-lg font-semibold text-foreground">Create Project</h3>
+        <button
+          class="p-1 rounded-md hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer"
+          onclick={cancelCreate}
+          aria-label="Close dialog"
+        >
+          <X size={20} />
+        </button>
+      </div>
+
+      <form
+        method="POST"
+        action="?/createProject"
+        use:enhance={() => {
+          return async ({ result, update }) => {
+            if (result.type === "success") {
+              isCreating = false;
+              // Invalidate all data to refresh the project list
+              await update({ invalidateAll: true });
+            } else {
+              // Error will be handled in the $effect
+            }
+          };
+        }}
+      >
+        <div class="space-y-4">
+          <div>
+            <label
+              for="create-name"
+              class="block text-sm font-medium text-foreground mb-1"
+            >
+              Project Name
+            </label>
+            <input
+              type="text"
+              id="create-name"
+              name="name"
+              value={createProjectName}
+              oninput={(e) =>
+                (createProjectName = (e.target as HTMLInputElement).value)}
+              required
+              class="w-full px-3 py-2 bg-primary text-primary-foreground border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+              placeholder="Enter project name"
+            />
+          </div>
+
+          <div>
+            <label
+              for="create-description"
+              class="block text-sm font-medium text-foreground mb-1"
+            >
+              Description (optional)
+            </label>
+            <textarea
+              id="create-description"
+              name="description"
+              value={createProjectDescription}
+              oninput={(e) =>
+                (createProjectDescription = (e.target as HTMLTextAreaElement)
+                  .value)}
+              class="w-full px-3 py-2 bg-primary text-primary-foreground border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+              rows="3"
+              placeholder="Describe your project"
+            ></textarea>
+          </div>
+
+          <div>
+            <label
+              for="create-color"
+              class="block text-sm font-medium text-foreground mb-1"
+            >
+              Color
+            </label>
+            <select
+              id="create-color"
+              name="color"
+              value={createProjectColor}
+              oninput={(e) =>
+                (createProjectColor = (e.target as HTMLSelectElement).value)}
+              required
+              class="w-full px-3 py-2 bg-primary text-primary-foreground border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+            >
+              <option value="#3b82f6">Blue</option>
+              <option value="#ef4444">Red</option>
+              <option value="#10b981">Green</option>
+              <option value="#f59e0b">Amber</option>
+              <option value="#8b5cf6">Purple</option>
+              <option value="#ec4899">Pink</option>
+              <option value="#06b6d4">Cyan</option>
+              <option value="#f97316">Orange</option>
+            </select>
+          </div>
+
+          <div>
+            <label
+              for="create-icon"
+              class="block text-sm font-medium text-foreground mb-1"
+            >
+              Icon
+            </label>
+            <select
+              id="create-icon"
+              name="icon"
+              value={createProjectIcon}
+              oninput={(e) =>
+                (createProjectIcon = (e.target as HTMLSelectElement).value)}
+              required
+              class="w-full px-3 py-2 bg-primary text-primary-foreground border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+            >
+              <option value="folder">Folder</option>
+              <option value="star">Star</option>
+              <option value="rocket">Rocket</option>
+              <option value="chart">Chart</option>
+              <option value="lightbulb">Lightbulb</option>
+              <option value="target">Target</option>
+              <option value="book">Book</option>
+              <option value="gear">Gear</option>
+            </select>
+          </div>
+
+          {#if createFormError}
+            <div class="text-destructive text-sm">
+              {createFormError}
+            </div>
+          {/if}
+
+          <div class="flex gap-3">
+            <button
+              type="submit"
+              class="flex-1 px-4 py-2.5 bg-accent text-accent-foreground rounded-lg border border-border font-medium transition-colors hover:bg-primary hover:text-primary-foreground cursor-pointer"
+            >
+              Create Project
+            </button>
+            <button
+              type="button"
+              class="flex-1 px-4 py-2.5 bg-background text-foreground rounded-lg border border-border font-medium transition-colors hover:bg-muted hover:text-muted-foreground cursor-pointer"
+              onclick={cancelCreate}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      </form>
     </div>
   </div>
 {/if}
@@ -411,13 +607,13 @@
           <div class="flex gap-3">
             <button
               type="submit"
-              class="flex-1 px-4 py-2.5 bg-primary text-primary-foreground rounded-lg border border-border font-medium transition-colors hover:bg-accent hover:text-accent-foreground cursor-pointer"
+              class="flex-1 px-4 py-2.5 bg-accent text-accent-foreground rounded-lg border border-border font-medium transition-colors hover:bg-primary hover:text-primary-foreground cursor-pointer"
             >
               Update Project
             </button>
             <button
               type="button"
-              class="flex-1 px-4 py-2.5 bg-background text-foreground rounded-lg border border-border font-medium transition-colors hover:bg-primary hover:text-primary-foreground cursor-pointer"
+              class="flex-1 px-4 py-2.5 bg-background text-foreground rounded-lg border border-border font-medium transition-colors hover:bg-muted hover:text-muted-foreground cursor-pointer"
               onclick={cancelEdit}
             >
               Cancel

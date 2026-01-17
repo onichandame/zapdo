@@ -95,9 +95,6 @@
             <h1 class="title text-3xl font-bold m-0 text-foreground">
                 Tasks
             </h1>
-            <span class="subtitle text-sm"
-                >Manage your personal and work tasks</span
-            >
         </div>
         <button
             class="add-button flex items-center gap-2 px-5 py-2.5 bg-primary text-primary-foreground rounded-lg font-semibold cursor-pointer transition-opacity hover:opacity-90 border-none"

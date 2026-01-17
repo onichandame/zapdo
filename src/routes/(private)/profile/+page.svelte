@@ -7,7 +7,6 @@
 
 <header class="mb-8">
   <h1 class="text-3xl font-bold text-foreground mb-2">Profile</h1>
-  <p>Manage your account settings</p>
 </header>
 
 <div
