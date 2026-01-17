@@ -3,7 +3,9 @@
 </script>
 
 <div class="landing-page min-h-screen bg-background text-foreground relative">
-  <div class="absolute top-4 right-4 sm:top-6 sm:right-6 bg-green-500 text-white text-xs font-bold px-3 py-1 rounded-lg shadow-md">
+  <div
+    class="absolute top-4 right-4 sm:top-6 sm:right-6 bg-green-500 text-white text-xs font-bold px-3 py-1 rounded-lg shadow-md"
+  >
     Free for limited time
   </div>
   <section class="hero py-16 px-4 sm:px-6 lg:px-8">
@@ -15,7 +17,8 @@
           >
           <span
             class="text-4xl sm:text-5xl md:text-6xl block text-foreground mt-2"
-            >With ZapDo</span
+            >With <span class="bg-accent text-accent-foreground">ZapDo</span
+            ></span
           >
         </h1>
         <p class="text-xl sm:text-2xl text-foreground max-w-3xl mx-auto mb-10">
@@ -57,7 +60,9 @@
           class="feature-card p-6 bg-background text-primary-foreground rounded-lg border border-border shadow-sm hover:shadow-md transition-shadow"
         >
           <div class="flex items-center gap-4 mb-4">
-            <div class="feature-icon w-12 h-12 flex items-center justify-center">
+            <div
+              class="feature-icon w-12 h-12 flex items-center justify-center"
+            >
               <Target size={24} />
             </div>
             <h3 class="text-xl font-semibold text-foreground">
@@ -74,7 +79,9 @@
           class="feature-card p-6 bg-background text-primary-foreground rounded-lg border border-border shadow-sm hover:shadow-md transition-shadow"
         >
           <div class="flex items-center gap-4 mb-4">
-            <div class="feature-icon w-12 h-12 flex items-center justify-center">
+            <div
+              class="feature-icon w-12 h-12 flex items-center justify-center"
+            >
               <Lock size={24} />
             </div>
             <h3 class="text-xl font-semibold text-foreground">
@@ -91,7 +98,9 @@
           class="feature-card p-6 bg-background text-primary-foreground rounded-lg border border-border shadow-sm hover:shadow-md transition-shadow"
         >
           <div class="flex items-center gap-4 mb-4">
-            <div class="feature-icon w-12 h-12 flex items-center justify-center">
+            <div
+              class="feature-icon w-12 h-12 flex items-center justify-center"
+            >
               <Plus size={24} />
             </div>
             <h3 class="text-xl font-semibold text-foreground">
@@ -106,8 +115,6 @@
       </div>
     </div>
   </section>
-
-
 
   <section
     class="cta py-20 px-4 sm:px-6 lg:px-8 bg-primary text-primary-foreground"
@@ -135,4 +142,3 @@
     scroll-behavior: smooth;
   }
 </style>
-
