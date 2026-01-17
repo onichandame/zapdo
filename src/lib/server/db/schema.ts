@@ -34,23 +34,44 @@ export const oauthAccount = sqliteTable(
 );
 
 export const session = sqliteTable(
-	'session',
-	{
-		id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
-		userId: text('user_id')
-			.notNull()
-			.references(() => user.id, { onDelete: 'cascade' }),
-		expiresAt: text('expires_at').notNull(),
-		createdAt: text('created_at').notNull().$defaultFn(() => new Date().toISOString())
-	},
-	(table) => [
-		index('session_user_id_idx').on(table.userId),
-		index('session_expires_at_idx').on(table.expiresAt)
-	]
+  'session',
+  {
+    id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+    userId: text('user_id')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    expiresAt: text('expires_at').notNull(),
+    createdAt: text('created_at').notNull().$defaultFn(() => new Date().toISOString())
+  },
+  (table) => [
+    index('session_user_id_idx').on(table.userId),
+    index('session_expires_at_idx').on(table.expiresAt)
+  ]
 );
+
+export const project = sqliteTable(
+  'project',
+  {
+    id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+    userId: text('user_id')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    name: text('name').notNull(),
+    description: text('description'),
+    color: text('color').notNull(),
+    icon: text('icon').notNull(),
+    createdAt: text('created_at').notNull().$defaultFn(() => new Date().toISOString()),
+    updatedAt: text('updated_at').notNull().$defaultFn(() => new Date().toISOString())
+  },
+  (table) => [
+    index('project_user_id_idx').on(table.userId)
+  ]
+);
+
 export const userRelations = relations(user, ({ many }) => ({
   oauthAccounts: many(oauthAccount),
-  sessions: many(session)
+  sessions: many(session),
+  projects: many(project)
 }));
 
 export const oauthAccountRelations = relations(oauthAccount, ({ one }) => ({
@@ -67,7 +88,13 @@ export const sessionRelations = relations(session, ({ one }) => ({
   })
 }));
 
-// Inferred types for easy usage
+export const projectRelations = relations(project, ({ one }) => ({
+  user: one(user, {
+    fields: [project.userId],
+    references: [user.id]
+  })
+}));
+
 export type User = typeof user.$inferSelect;
 export type NewUser = typeof user.$inferInsert;
 
@@ -77,3 +104,6 @@ export type OAuthProvider = 'google' | 'github';
 
 export type Session = typeof session.$inferSelect;
 export type NewSession = typeof session.$inferInsert;
+
+export type Project = typeof project.$inferSelect;
+export type NewProject = typeof project.$inferInsert;
