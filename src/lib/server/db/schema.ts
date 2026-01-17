@@ -1,4 +1,4 @@
-import { index, integer, sqliteTable, text } from 'drizzle-orm/sqlite-core';
+import { foreignKey, index, integer, sqliteTable, text, type AnySQLiteColumn } from 'drizzle-orm/sqlite-core';
 import { relations } from 'drizzle-orm';
 
 export const user = sqliteTable('user', {
@@ -56,6 +56,7 @@ export const project = sqliteTable(
     userId: text('user_id')
       .notNull()
       .references(() => user.id, { onDelete: 'cascade' }),
+    parentId: text('parent_id').references((): AnySQLiteColumn => project.id),
     name: text('name').notNull(),
     description: text('description'),
     color: text('color').notNull(),
@@ -64,14 +65,17 @@ export const project = sqliteTable(
     updatedAt: text('updated_at').notNull().$defaultFn(() => new Date().toISOString())
   },
   (table) => [
-    index('project_user_id_idx').on(table.userId)
+    index('project_user_id_idx').on(table.userId),
+    index('project_parent_id_idx').on(table.parentId)
   ]
 );
 
 export const userRelations = relations(user, ({ many }) => ({
   oauthAccounts: many(oauthAccount),
   sessions: many(session),
-  projects: many(project)
+  projects: many(project, {
+    relationName: 'userProjects'
+  })
 }));
 
 export const oauthAccountRelations = relations(oauthAccount, ({ one }) => ({
@@ -88,10 +92,17 @@ export const sessionRelations = relations(session, ({ one }) => ({
   })
 }));
 
-export const projectRelations = relations(project, ({ one }) => ({
+export const projectRelations = relations(project, ({ one, many }) => ({
   user: one(user, {
     fields: [project.userId],
     references: [user.id]
+  }),
+  parent: one(project, {
+    fields: [project.parentId],
+    references: [project.id]
+  }),
+  subprojects: many(project, {
+    relationName: 'subprojects'
   })
 }));
 

@@ -10,6 +10,7 @@ export async function createProject(
     description?: string;
     color: string;
     icon: string;
+    parentId?: string;
   }
 ) {
   const projectId = crypto.randomUUID();
@@ -21,7 +22,8 @@ export async function createProject(
       name: projectData.name,
       description: projectData.description,
       color: projectData.color,
-      icon: projectData.icon
+      icon: projectData.icon,
+      parentId: projectData.parentId
     })
     .returning();
 
@@ -57,6 +59,7 @@ export async function updateProject(
     description?: string;
     color?: string;
     icon?: string;
+    parentId?: string;
   }
 ) {
   const [project] = await db
@@ -77,4 +80,26 @@ export async function updateProject(
 
 export async function deleteProject(db: Database, projectId: string) {
   await db.delete(schema.project).where(eq(schema.project.id, projectId));
+}
+
+export async function getSubprojectsByParentId(db: Database, parentId: string) {
+  const subprojects = await db.query.project.findMany({
+    where: (project, { eq }) => eq(project.parentId, parentId),
+    orderBy: (project, { desc }) => [desc(project.createdAt)]
+  });
+
+  return subprojects;
+}
+
+export async function getProjectsWithoutParent(db: Database, userId: string) {
+  const projects = await db.query.project.findMany({
+    where: (project, { eq, and, isNull }) =>
+      and(
+        eq(project.userId, userId),
+        isNull(project.parentId)
+      ),
+    orderBy: (project, { desc }) => [desc(project.createdAt)]
+  });
+
+  return projects;
 }

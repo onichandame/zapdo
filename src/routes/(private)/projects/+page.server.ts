@@ -1,5 +1,4 @@
 import { fail } from '@sveltejs/kit';
-import type { RequestEvent } from '@sveltejs/kit';
 import type { Session } from '$lib/server/db/schema';
 import type { Database } from '$lib/server/db';
 import { getProjectsByUserId, deleteProject, updateProject, createProject } from '$lib/server/db/projects';
@@ -38,6 +37,7 @@ export const actions = {
     const description = formData.get('description') as string | null;
     const color = formData.get('color') as string;
     const icon = formData.get('icon') as string;
+    const parentId = formData.get('parentId') as string | null;
 
     if (!name || !name.trim()) {
       return fail(400, { error: 'Project name is required' });
@@ -56,7 +56,8 @@ export const actions = {
         name: name.trim(),
         description: description?.trim() || undefined,
         color,
-        icon
+        icon,
+        parentId: parentId || undefined
       });
 
       return { success: true, project };
@@ -102,6 +103,7 @@ export const actions = {
     const description = formData.get('description') as string | null;
     const color = formData.get('color') as string;
     const icon = formData.get('icon') as string;
+    const parentId = formData.get('parentId') as string | null;
 
     if (!projectId) {
       return fail(400, { error: 'Project ID is required' });
@@ -131,7 +133,8 @@ export const actions = {
         name: name.trim(),
         description: description?.trim() || undefined,
         color,
-        icon
+        icon,
+        parentId: parentId || undefined
       });
 
       return { success: true, project };
