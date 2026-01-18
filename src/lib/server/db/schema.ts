@@ -95,7 +95,8 @@ export const userRelations = relations(user, ({ many }) => ({
   projects: many(project, {
     relationName: 'userProjects'
   }),
-  kek: many(userKek, { relationName: `userkek` })
+  kek: many(userKek, { relationName: `userkek` }),
+  deks: many(userProjectDek, { relationName: 'userDeks' })
 }));
 
 export const oauthAccountRelations = relations(oauthAccount, ({ one }) => ({
@@ -112,15 +113,52 @@ export const sessionRelations = relations(session, ({ one }) => ({
   })
 }));
 
-export const userKekRelations = relations(userKek, ({ one }) => ({
+export const userKekRelations = relations(userKek, ({ one, many }) => ({
   user: one(user, {
     fields: [userKek.userId],
     references: [user.id]
     , relationName: `userkek`
-  })
+  }),
+  projectDeks: many(userProjectDek, { relationName: `userKeks` })
 }));
 
+export const userProjectDek = sqliteTable(
+  'user_project_dek',
+  {
+    id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+    userId: text('user_id')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    projectId: text('project_id')
+      .notNull()
+      .references(() => project.id, { onDelete: 'cascade' }),
+    userKekId: text('user_kek_id').notNull().references(() => userKek.id, { onDelete: 'set null' }),
+    encryptedDek: text('encrypted_dek').notNull(),
+    encryptionAlgorithm: text('encryption_algorithm').notNull().default('AES-GCM'),
+    keyDerivationVersion: integer('key_derivation_version').notNull().default(1),
+    createdAt: text('created_at').notNull().$defaultFn(() => new Date().toISOString()),
+    updatedAt: text('updated_at').notNull().$defaultFn(() => new Date().toISOString())
+  },
+  (table) => [
+    uniqueIndex('user_project_dek_user_project_idx').on(table.userId, table.projectId,),
+    index('user_project_dek_user_id_idx').on(table.userId),
+    index('user_project_dek_project_id_idx').on(table.projectId)
+  ]
+);
 
+export const userProjectDekRelations = relations(userProjectDek, ({ one }) => ({
+  user: one(user, {
+    fields: [userProjectDek.userId],
+    references: [user.id],
+    relationName: 'userDeks'
+  }),
+  project: one(project, {
+    fields: [userProjectDek.projectId],
+    references: [project.id],
+    relationName: 'projectDeks'
+  }),
+  userKek: one(userKek, { fields: [userProjectDek.userKekId], references: [userKek.id], relationName: `userKeks` })
+}));
 
 export const projectRelations = relations(project, ({ one, many }) => ({
   user: one(user, {
@@ -134,10 +172,13 @@ export const projectRelations = relations(project, ({ one, many }) => ({
   }),
   subprojects: many(project, {
     relationName: 'subprojects'
-  })
+  }),
+  deks: many(userProjectDek, { relationName: 'projectDeks' })
 }));
 
 export type Project = typeof project.$inferSelect;
 export type NewProject = typeof project.$inferInsert;
 export type UserKek = typeof userKek.$inferSelect;
 export type NewUserKek = typeof userKek.$inferInsert;
+export type UserProjectDek = typeof userProjectDek.$inferSelect;
+export type NewUserProjectDek = typeof userProjectDek.$inferInsert;
