@@ -1,4 +1,4 @@
-import { index, integer, sqliteTable, text, type AnySQLiteColumn } from 'drizzle-orm/sqlite-core';
+import { index, integer, sqliteTable, text, uniqueIndex, type AnySQLiteColumn } from 'drizzle-orm/sqlite-core';
 import { relations } from 'drizzle-orm';
 
 export const user = sqliteTable('user', {
@@ -10,6 +10,25 @@ export const user = sqliteTable('user', {
   createdAt: text('created_at').notNull().$defaultFn(() => new Date().toISOString()),
   updatedAt: text('updated_at').notNull().$defaultFn(() => new Date().toISOString())
 });
+
+export const userKek = sqliteTable(
+  'user_kek',
+  {
+    id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+    userId: text('user_id')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    keyDerivationSalt: text('key_derivation_salt').notNull(),
+    keyDerivationIterations: integer('key_derivation_iterations').notNull().default(100000),
+    keyDerivationAlgorithm: text('key_derivation_algorithm').notNull().default('PBKDF2-SHA256'),
+    keyVersion: integer('key_version').notNull().default(1),
+    createdAt: text('created_at').notNull().$defaultFn(() => new Date().toISOString()),
+    updatedAt: text('updated_at').notNull().$defaultFn(() => new Date().toISOString())
+  },
+  (table) => [
+    uniqueIndex('user_kek_user_id_key_version_idx').on(table.userId, table.keyVersion)
+  ]
+);
 
 export const oauthAccount = sqliteTable(
   'oauth_account',
@@ -75,7 +94,8 @@ export const userRelations = relations(user, ({ many }) => ({
   sessions: many(session),
   projects: many(project, {
     relationName: 'userProjects'
-  })
+  }),
+  kek: many(userKek, { relationName: `userkek` })
 }));
 
 export const oauthAccountRelations = relations(oauthAccount, ({ one }) => ({
@@ -92,6 +112,16 @@ export const sessionRelations = relations(session, ({ one }) => ({
   })
 }));
 
+export const userKekRelations = relations(userKek, ({ one }) => ({
+  user: one(user, {
+    fields: [userKek.userId],
+    references: [user.id]
+    , relationName: `userkek`
+  })
+}));
+
+
+
 export const projectRelations = relations(project, ({ one, many }) => ({
   user: one(user, {
     fields: [project.userId],
@@ -107,15 +137,7 @@ export const projectRelations = relations(project, ({ one, many }) => ({
   })
 }));
 
-export type User = typeof user.$inferSelect;
-export type NewUser = typeof user.$inferInsert;
-
-export type OAuthAccount = typeof oauthAccount.$inferSelect;
-export type NewOAuthAccount = typeof oauthAccount.$inferInsert;
-export type OAuthProvider = 'google' | 'github';
-
-export type Session = typeof session.$inferSelect;
-export type NewSession = typeof session.$inferInsert;
-
 export type Project = typeof project.$inferSelect;
 export type NewProject = typeof project.$inferInsert;
+export type UserKek = typeof userKek.$inferSelect;
+export type NewUserKek = typeof userKek.$inferInsert;
