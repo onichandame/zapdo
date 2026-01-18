@@ -1,26 +1,25 @@
-import { fail } from '@sveltejs/kit';
-import type { Session } from '$lib/server/db/schema';
-import type { Database } from '$lib/server/db';
-import { getProjectsByUserId, deleteProject, updateProject, createProject } from '$lib/server/db/projects';
+import { fail, type RequestEvent } from '@sveltejs/kit';
+import { deleteProject, updateProject, createProject, getProjectsByUserId, getProjectPath, getAllUserProjects, validatePotentialParent } from '$lib/server/db/projects';
 
-interface Locals {
-  session: Session | null;
-  db: Database;
-}
-
-export const load = async ({ locals }: { locals: Locals }) => {
+export const load = async ({ locals, url }) => {
   const { session, db } = locals;
+  const parentId = url.searchParams.get('parent');
 
-  if (!session) {
-    return {
-      projects: []
-    };
-  }
+  const projects = await getProjectsByUserId(
+    db,
+    session!.userId,
+    parentId || null
+  );
 
-  const projects = await getProjectsByUserId(db, session.userId);
+  const allProjects = await getAllUserProjects(db, session!.userId);
+
+  const breadcrumbPath = parentId ? await getProjectPath(db, parentId) : null;
 
   return {
-    projects
+    projects,
+    allProjects,
+    currentParentId: parentId,
+    breadcrumbPath
   };
 };
 
@@ -51,6 +50,13 @@ export const actions = {
       return fail(400, { error: 'Project icon is required' });
     }
 
+    if (parentId) {
+      const result = await validatePotentialParent(db, null, parentId);
+      if (result) {
+        return fail(400, { error: result.error });
+      }
+    }
+
     try {
       const project = await createProject(db, session.userId, {
         name: name.trim(),
@@ -67,7 +73,7 @@ export const actions = {
     }
   },
 
-  deleteProject: async ({ request, locals }) => {
+  deleteProject: async ({ request, locals }: RequestEvent) => {
     const { session, db } = locals;
 
     if (!session) {
@@ -90,7 +96,7 @@ export const actions = {
     }
   },
 
-  updateProject: async ({ request, locals }) => {
+  updateProject: async ({ request, locals }: RequestEvent) => {
     const { session, db } = locals;
 
     if (!session) {
@@ -121,9 +127,18 @@ export const actions = {
       return fail(400, { error: 'Project icon is required' });
     }
 
+    if (parentId) {
+      const result = await validatePotentialParent(db, projectId, parentId);
+      if (result) {
+        return fail(400, { error: result.error });
+      }
+    }
+
     try {
-      const existingProject = await getProjectsByUserId(db, session.userId);
-      const projectExists = existingProject.some(p => p.id === projectId);
+      const existingProject = await db.query.project.findMany({
+        where: (project: any, { eq }: any) => eq(project.userId, session.userId)
+      });
+      const projectExists = existingProject.some((p: any) => p.id === projectId);
 
       if (!projectExists) {
         return fail(403, { error: 'Project not found or unauthorized' });

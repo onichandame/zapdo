@@ -1,6 +1,20 @@
 <script lang="ts">
-  import { Folder, Plus, Trash, X, Star, Rocket, ChartBar, Lightbulb, Target, Book, GearSix } from "phosphor-svelte";
+  import {
+    Folder,
+    Plus,
+    Trash,
+    X,
+    Star,
+    Rocket,
+    ChartBar,
+    Lightbulb,
+    Target,
+    Book,
+    GearSix,
+    PencilSimple,
+  } from "phosphor-svelte";
   import { enhance } from "$app/forms";
+  import { goto } from "$app/navigation";
   import type { Attachment } from "svelte/attachments";
 
   let { data, form } = $props();
@@ -16,14 +30,15 @@
   let editProjectDescription = $state("");
   let editProjectColor = $state("#3b82f6");
   let editProjectIcon = $state("folder");
+  let editProjectParentId = $state<string | null>(null);
   let editFormError = $state("");
 
-  // Create project state
   let isCreating = $state(false);
   let createProjectName = $state("");
   let createProjectDescription = $state("");
   let createProjectColor = $state("#3b82f6");
   let createProjectIcon = $state("folder");
+  let createProjectParentId = $state<string | null>(null);
   let createFormError = $state("");
 
   // Create attachment functions
@@ -99,12 +114,14 @@
     description: string,
     color: string,
     icon: string,
+    parentId: string | null = null,
   ) {
     editProjectId = projectId;
     editProjectName = name;
     editProjectDescription = description || "";
     editProjectColor = color;
     editProjectIcon = icon;
+    editProjectParentId = parentId;
     isEditing = true;
   }
 
@@ -114,12 +131,13 @@
     isEditing = false;
   }
 
-  function showCreateDialog() {
+  function showCreateDialog(parentId: string | null = null) {
     isCreating = true;
     createProjectName = "";
     createProjectDescription = "";
     createProjectColor = "#3b82f6";
     createProjectIcon = "folder";
+    createProjectParentId = parentId;
     createFormError = "";
   }
 
@@ -149,10 +167,47 @@
       };
     }
   });
+
+  // Navigate to subprojects view
+  async function navigateToSubprojects(projectId: string) {
+    const url = new URL(window.location.href);
+    url.searchParams.set("parent", projectId);
+    await goto(url.toString(), { invalidateAll: true });
+  }
+
+  // Navigate back to parent or root
+  async function navigateToParent() {
+    const url = new URL(window.location.href);
+    url.searchParams.delete("parent");
+    await goto(url.toString(), { invalidateAll: true });
+  }
+
+  function getBreadcrumbTitle(): string {
+    const pathNames = ["Projects"];
+
+    // Build the breadcrumb path from root to current parent
+    if (data.breadcrumbPath)
+      pathNames.push(
+        ...data.breadcrumbPath?.map(
+          (project: { name: string }) => project.name,
+        ),
+      );
+    return pathNames.join(" > ");
+  }
 </script>
 
 <header class="mb-8">
-  <h1 class="text-3xl font-bold text-foreground mb-2">Projects</h1>
+  <h1 class="text-3xl font-bold text-foreground mb-2">
+    {getBreadcrumbTitle()}
+  </h1>
+  {#if data?.currentParentId}
+    <button
+      class="text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1 cursor-pointer"
+      onclick={navigateToParent}
+    >
+      ← Back to Projects
+    </button>
+  {/if}
 </header>
 
 {#if data?.projects && data.projects.length === 0}
@@ -160,37 +215,54 @@
     <div class="text-muted-foreground mb-4">No projects yet</div>
     <button
       class="flex items-center gap-3 px-6 py-3 bg-primary text-primary-foreground rounded-lg border border-border hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer"
-      onclick={showCreateDialog}
+      onclick={() => showCreateDialog(data?.currentParentId || null)}
     >
       <Plus size={20} />
-      <span>Create Your First Project</span>
+      <span>
+        {#if data?.currentParentId}
+          Create Subproject
+        {:else}
+          Create Your First Project
+        {/if}
+      </span>
     </button>
   </div>
 {:else}
-  <div class="space-y-4">
-    {#each data?.projects as project (project.id)}
+  {#each data?.projects as project (project.id)}
+    <div class="group project-item mb-4">
       <div
-        class="group project-card flex items-center gap-4 p-6 sm:p-8 bg-primary text-primary-foreground rounded-lg border border-border shadow-card transition-all hover:bg-accent hover:border-muted hover:text-accent-foreground hover:shadow-none cursor-pointer"
+        class="flex items-center gap-4 p-6 sm:p-8 bg-primary text-primary-foreground rounded-lg border border-border shadow-card transition-all hover:bg-accent hover:border-muted hover:text-accent-foreground hover:shadow-none cursor-pointer"
         role="button"
         tabindex="0"
-        onclick={() =>
-          showEditDialog(
-            project.id,
-            project.name,
-            project.description ?? "",
-            project.color,
-            project.icon,
-          )}
-        onkeydown={(e) => {
-          if (e.key === "Enter" || e.key === " ") {
-            e.preventDefault();
+        onclick={() => {
+          if (project.hasSubprojects) {
+            navigateToSubprojects(project.id);
+          } else {
             showEditDialog(
               project.id,
               project.name,
               project.description ?? "",
               project.color,
               project.icon,
+              project.parentId,
             );
+          }
+        }}
+        onkeydown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            if (project.hasSubprojects) {
+              navigateToSubprojects(project.id);
+            } else {
+              showEditDialog(
+                project.id,
+                project.name,
+                project.description ?? "",
+                project.color,
+                project.icon,
+                project.parentId,
+              );
+            }
           }
         }}
       >
@@ -216,6 +288,7 @@
             <Folder size={24} weight="fill" />
           {/if}
         </div>
+
         <div class="flex-1 min-w-0">
           <h2 class="text-xl font-semibold text-foreground m-0">
             {project.name}
@@ -225,32 +298,75 @@
               {project.description}
             </p>
           {/if}
+          {#if project.subprojectsCount > 0}
+            <div class="flex items-center gap-1 mt-1">
+              <Folder size={12} class="text-muted-foreground" />
+              <span class="text-xs text-muted-foreground">
+                {project.subprojectsCount}
+                {project.subprojectsCount === 1 ? "subproject" : "subprojects"}
+              </span>
+            </div>
+          {/if}
         </div>
-        <button
-          class="delete-button flex-shrink-0 bg-none border-none cursor-pointer p-2 rounded-md transition-all hover:bg-[rgba(239,68,68,0.1)] hover:text-[#ef4444] opacity-0 group-hover:opacity-100"
-          onclick={(e) => {
-            e.stopPropagation();
-            showDeleteConfirmation(project.id, project.name);
-          }}
-          onkeydown={(e) => {
-            if (e.key === "Enter" || e.key === " ") {
-              e.preventDefault();
+
+        <div class="flex gap-2">
+          <button
+            class="edit-button flex-shrink-0 bg-none border-none cursor-pointer p-2 rounded-md transition-all hover:bg-card hover:text-card-foreground opacity-0 group-hover:opacity-100"
+            onclick={(e) => {
+              e.stopPropagation();
+              showEditDialog(
+                project.id,
+                project.name,
+                project.description ?? "",
+                project.color,
+                project.icon,
+                project.parentId,
+              );
+            }}
+            onkeydown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                e.stopPropagation();
+                showEditDialog(
+                  project.id,
+                  project.name,
+                  project.description ?? "",
+                  project.color,
+                  project.icon,
+                  project.parentId,
+                );
+              }
+            }}
+            aria-label={`Edit project ${project.name}`}
+          >
+            <PencilSimple size={18} />
+          </button>
+          <button
+            class="delete-button flex-shrink-0 bg-none border-none cursor-pointer p-2 rounded-md transition-all hover:bg-[rgba(239,68,68,0.1)] hover:text-[#ef4444] opacity-0 group-hover:opacity-100"
+            onclick={(e) => {
               e.stopPropagation();
               showDeleteConfirmation(project.id, project.name);
-            }
-          }}
-          aria-label="Delete project"
-        >
-          <Trash size={18} />
-        </button>
+            }}
+            onkeydown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                e.stopPropagation();
+                showDeleteConfirmation(project.id, project.name);
+              }
+            }}
+            aria-label="Delete project"
+          >
+            <Trash size={18} />
+          </button>
+        </div>
       </div>
-    {/each}
-  </div>
+    </div>
+  {/each}
 
   <div class="mt-8">
     <button
       class="flex items-center gap-3 px-6 py-3 bg-primary text-primary-foreground rounded-lg border border-border hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer"
-      onclick={showCreateDialog}
+      onclick={() => showCreateDialog(data?.currentParentId || null)}
     >
       <Plus size={20} />
       <span>Create New Project</span>
@@ -414,6 +530,31 @@
 
           <div>
             <label
+              for="create-parent"
+              class="block text-sm font-medium text-foreground mb-1"
+            >
+              Parent Project (optional)
+            </label>
+            <select
+              id="create-parent"
+              name="parentId"
+              value={createProjectParentId || ""}
+              oninput={(e) =>
+                (createProjectParentId =
+                  (e.target as HTMLSelectElement).value || null)}
+              class="w-full px-3 py-2 bg-primary text-primary-foreground border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+            >
+              <option value="">None (Root Level)</option>
+              {#each data.allProjects as project}
+                <option value={project.id}>
+                  {project.name}
+                </option>
+              {/each}
+            </select>
+          </div>
+
+          <div>
+            <label
               for="create-color"
               class="block text-sm font-medium text-foreground mb-1"
             >
@@ -564,6 +705,33 @@
               placeholder="Describe your project"
               >{editProjectDescription}</textarea
             >
+          </div>
+
+          <div>
+            <label
+              for="edit-parent"
+              class="block text-sm font-medium text-foreground mb-1"
+            >
+              Parent Project (optional)
+            </label>
+            <select
+              id="edit-parent"
+              name="parentId"
+              value={editProjectParentId || ""}
+              oninput={(e) =>
+                (editProjectParentId =
+                  (e.target as HTMLSelectElement).value || null)}
+              class="w-full px-3 py-2 bg-primary text-primary-foreground border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+            >
+              <option value="">None (Root Level)</option>
+              {#each data.allProjects as project}
+                {#if project.id !== editProjectId}
+                  <option value={project.id}>
+                    {project.name}
+                  </option>
+                {/if}
+              {/each}
+            </select>
           </div>
 
           <div>

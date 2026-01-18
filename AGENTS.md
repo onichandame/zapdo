@@ -1,4 +1,5 @@
 **Do not use subagents for coding, use subagents only for peripheral tasks**
+**Do not run parallel background tasks, concurrency is not allowed here**
 **Do not make commits until user EXPLICITLY asks**
 **Always make sure `npm run check` passes**
 

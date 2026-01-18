@@ -1,4 +1,4 @@
-import { foreignKey, index, integer, sqliteTable, text, type AnySQLiteColumn } from 'drizzle-orm/sqlite-core';
+import { index, integer, sqliteTable, text, type AnySQLiteColumn } from 'drizzle-orm/sqlite-core';
 import { relations } from 'drizzle-orm';
 
 export const user = sqliteTable('user', {
@@ -100,6 +100,7 @@ export const projectRelations = relations(project, ({ one, many }) => ({
   parent: one(project, {
     fields: [project.parentId],
     references: [project.id]
+    , relationName: 'subprojects'
   }),
   subprojects: many(project, {
     relationName: 'subprojects'
