@@ -21,12 +21,17 @@ export const userKek = sqliteTable(
     keyDerivationSalt: text('key_derivation_salt').notNull(),
     keyDerivationIterations: integer('key_derivation_iterations').notNull().default(100000),
     keyDerivationAlgorithm: text('key_derivation_algorithm').notNull().default('PBKDF2-SHA256'),
+    publicKey: text('public_key').notNull(),
+    encryptedPrivateKey: text('encrypted_private_key').notNull(),
+    asymmetricAlgorithm: text('asymmetric_algorithm').notNull().default('RSA-OAEP'),
+    keyFormat: text('key_format').notNull().default('JWK'),
     keyVersion: integer('key_version').notNull().default(1),
     createdAt: text('created_at').notNull().$defaultFn(() => new Date().toISOString()),
     updatedAt: text('updated_at').notNull().$defaultFn(() => new Date().toISOString())
   },
   (table) => [
-    uniqueIndex('user_kek_user_id_key_version_idx').on(table.userId, table.keyVersion)
+    uniqueIndex('user_kek_user_id_key_version_idx').on(table.userId, table.keyVersion),
+    index('user_kek_user_id_idx').on(table.userId)
   ]
 );
 
