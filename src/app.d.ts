@@ -13,7 +13,7 @@ declare global {
     }
 
     interface Locals {
-      session?: schema.Session & { user: schema.User & { oauthAccounts: schema.OAuthAccount[] } }
+      session?: schema.Session & { user: schema.User & { keks: schema.UserKek[], oauthAccounts: schema.OAuthAccount[] } }
       db: Database;
     }
 
