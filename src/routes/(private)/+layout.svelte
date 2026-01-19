@@ -1,9 +1,34 @@
 <script lang="ts">
   import favicon from "$lib/assets/favicon.svg";
-  import { StarFour, Gear, UserCircle, Warehouse } from "phosphor-svelte";
+  import { StarFour, UserCircle, Warehouse } from "phosphor-svelte";
   import { page } from "$app/state";
+  import { kekStore } from "$lib/stores/kekStore";
+  import { goto } from "$app/navigation";
+  import { onMount, onDestroy } from "svelte";
 
   let { children } = $props();
+
+  const skipKekCheck =
+    page.url.pathname.startsWith("/unlock") ||
+    page.url.pathname.startsWith("/onboarding");
+
+  if (!skipKekCheck) {
+    let unsubscribe: () => void;
+    onMount(() => {
+      unsubscribe = kekStore.subscribe((kek) => {
+        if (!kek) {
+          const redirectUrl = `/unlock?redirect=${encodeURIComponent(page.url.pathname + page.url.search)}`;
+          goto(redirectUrl);
+        }
+      });
+    });
+
+    onDestroy(() => {
+      if (unsubscribe) {
+        unsubscribe();
+      }
+    });
+  }
 
   function isActive(path: string): boolean {
     return page.url.pathname.startsWith(path);
@@ -38,21 +63,33 @@
       <a
         href="/tasks"
         title="Tasks"
-        class="p-2 rounded-lg hover:bg-accent hover:text-accent-foreground transition-colors {isActive('/tasks') ? 'bg-accent text-accent-foreground' : ''}"
+        class="p-2 rounded-lg hover:bg-accent hover:text-accent-foreground transition-colors {isActive(
+          '/tasks',
+        )
+          ? 'bg-accent text-accent-foreground'
+          : ''}"
       >
         <StarFour size={24} />
       </a>
       <a
         href="/projects"
         title="Projects"
-        class="p-2 rounded-lg hover:bg-accent hover:text-accent-foreground transition-colors {isActive('/projects') ? 'bg-accent text-accent-foreground' : ''}"
+        class="p-2 rounded-lg hover:bg-accent hover:text-accent-foreground transition-colors {isActive(
+          '/projects',
+        )
+          ? 'bg-accent text-accent-foreground'
+          : ''}"
       >
         <Warehouse size={24} />
       </a>
       <a
         href="/profile"
         title="Profile"
-        class="p-2 rounded-lg hover:bg-accent hover:text-accent-foreground transition-colors {isActive('/profile') ? 'bg-accent text-accent-foreground' : ''}"
+        class="p-2 rounded-lg hover:bg-accent hover:text-accent-foreground transition-colors {isActive(
+          '/profile',
+        )
+          ? 'bg-accent text-accent-foreground'
+          : ''}"
       >
         <UserCircle size={24} />
       </a>
@@ -65,4 +102,3 @@
     </div>
   </main>
 </div>
-

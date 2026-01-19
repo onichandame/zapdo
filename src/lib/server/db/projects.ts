@@ -85,6 +85,11 @@ export async function createProject(
     color: string;
     icon: string;
     parentId?: string;
+  },
+  projectDekData: {
+    userKekId: string,
+    encryptedDek: string,
+    encryptionAlgorithm: string,
   }
 ) {
   const projectId = crypto.randomUUID();
@@ -100,10 +105,14 @@ export async function createProject(
       parentId: projectData.parentId
     })
     .returning();
+  await db.insert(schema.userProjectDek).values({
+    userId,
+    projectId,
+    userKekId: projectDekData.userKekId,
+    encryptedDek: projectDekData.encryptedDek,
+    encryptionAlgorithm: projectDekData.encryptionAlgorithm,
 
-  if (!project) {
-    throw new Error('Failed to create project');
-  }
+  })
 
   return project;
 }
@@ -126,22 +135,15 @@ export async function getProjectsByUserId(
     where: whereClause,
     orderBy: (project, { desc }) => [desc(project.createdAt)],
     with: {
+      deks: { where: (dek, { eq }) => eq(dek.userId, userId), limit: 1 },
       subprojects: {
         columns: {
           id: true
-        }
+        },
       }
     }
   }).then(projects => projects.map(project => ({ ...project, subprojectsCount: project.subprojects.length, hasSubprojects: project.subprojects.length > 0 })))
   return projects
-}
-
-export async function getProjectById(db: Database, projectId: string) {
-  const project = await db.query.project.findFirst({
-    where: (project, { eq }) => eq(project.id, projectId),
-  });
-
-  return project;
 }
 
 export async function updateProject(

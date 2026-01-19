@@ -1,5 +1,5 @@
-import { fail, type RequestEvent } from '@sveltejs/kit';
-import { deleteProject, updateProject, createProject, getProjectsByUserId, getProjectPath, getAllUserProjects, validatePotentialParent } from '$lib/server/db/projects';
+import { fail } from '@sveltejs/kit';
+import { deleteProject, updateProject, createProject, getProjectsByUserId, getProjectPath, getAllUserProjects, validatePotentialParent, } from '$lib/server/db/projects';
 
 export const load = async ({ locals, url }) => {
   const { session, db } = locals;
@@ -15,11 +15,14 @@ export const load = async ({ locals, url }) => {
 
   const breadcrumbPath = parentId ? await getProjectPath(db, parentId) : null;
 
+  const userKeks = session!.user.keks;
+
   return {
     projects,
     allProjects,
     currentParentId: parentId,
-    breadcrumbPath
+    breadcrumbPath,
+    userKeks
   };
 };
 
@@ -31,12 +34,19 @@ export const actions = {
       return fail(401, { error: 'Unauthorized' });
     }
 
+    const userKeks = session.user.keks;
+    if (!userKeks || userKeks.length === 0) {
+      return fail(400, { error: 'Master password not set up. Please complete onboarding first.' });
+    }
+
     const formData = await request.formData();
     const name = formData.get('name') as string;
     const description = formData.get('description') as string | null;
     const color = formData.get('color') as string;
     const icon = formData.get('icon') as string;
     const parentId = formData.get('parentId') as string | null;
+    const encryptedDek = formData.get('encryptedDek') as string;
+    const encryptionAlgorithm = formData.get('encryptionAlgorithm') as string;
 
     if (!name || !name.trim()) {
       return fail(400, { error: 'Project name is required' });
@@ -48,6 +58,14 @@ export const actions = {
 
     if (!icon) {
       return fail(400, { error: 'Project icon is required' });
+    }
+
+    if (!encryptedDek) {
+      return fail(400, { error: 'Encrypted DEK is required' });
+    }
+
+    if (!encryptionAlgorithm) {
+      return fail(400, { error: 'Encryption algorithm is required' });
     }
 
     if (parentId) {
@@ -64,7 +82,7 @@ export const actions = {
         color,
         icon,
         parentId: parentId || undefined
-      });
+      }, { encryptedDek, encryptionAlgorithm, userKekId: locals.session!.user.keks[0]!.id });
 
       return { success: true, project };
     } catch (error) {
@@ -73,7 +91,7 @@ export const actions = {
     }
   },
 
-  deleteProject: async ({ request, locals }: RequestEvent) => {
+  deleteProject: async ({ request, locals }) => {
     const { session, db } = locals;
 
     if (!session) {
@@ -96,7 +114,7 @@ export const actions = {
     }
   },
 
-  updateProject: async ({ request, locals }: RequestEvent) => {
+  updateProject: async ({ request, locals }) => {
     const { session, db } = locals;
 
     if (!session) {

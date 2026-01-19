@@ -16,6 +16,8 @@
   import { enhance } from "$app/forms";
   import { goto } from "$app/navigation";
   import type { Attachment } from "svelte/attachments";
+  import { generateAesKey, exportAesKey, encryptWithAesGcm } from "$lib/crypto";
+  import { kekStore } from "$lib/stores/kekStore";
 
   let { data, form } = $props();
 
@@ -193,6 +195,87 @@
         ),
       );
     return pathNames.join(" > ");
+  }
+
+  // Encrypt project data and submit
+  async function handleCreateProjectSubmit(e: SubmitEvent) {
+    e.preventDefault();
+
+    const form = e.target as HTMLFormElement;
+    const formData = new FormData(form);
+
+    try {
+      // Get cached KEK from store
+      const kek = await new Promise<CryptoKey>((resolve) => {
+        const unsubscribe = kekStore.subscribe(
+          (cachedKek: CryptoKey | null) => {
+            unsubscribe();
+            if (!cachedKek) {
+              createFormError =
+                "KEK not available. Please unlock your account first.";
+              return;
+            }
+            resolve(cachedKek);
+          },
+        );
+      });
+
+      // Generate a new DEK for this project
+      const dek = await generateAesKey();
+      const exportedDek = await exportAesKey(dek);
+
+      // Encrypt project name and description with DEK
+      const name = formData.get("name") as string;
+      const description = formData.get("description") as string | null;
+
+      const encryptedName = await encryptWithAesGcm(name, dek);
+      const encryptedDescription = description
+        ? await encryptWithAesGcm(description, dek)
+        : null;
+
+      // Encrypt the DEK with the cached KEK
+      const encryptedDekComponents = await encryptWithAesGcm(exportedDek, kek);
+      const encryptedDek = JSON.stringify(encryptedDekComponents);
+
+      // Update form data with encrypted values
+      formData.set("name", JSON.stringify(encryptedName));
+      if (encryptedDescription) {
+        formData.set("description", JSON.stringify(encryptedDescription));
+      } else {
+        formData.set("description", "");
+      }
+      formData.set("encryptedDek", encryptedDek);
+      formData.set("encryptionAlgorithm", "AES-GCM");
+
+      // Submit the form with modified data
+      fetch("?/createProject", {
+        method: "POST",
+        body: formData,
+        headers: {
+          Accept: "application/json",
+        },
+      })
+        .then(async (response) => {
+          const result = (await response.json()) as {
+            success?: boolean;
+            error?: string;
+          };
+          if (result.success) {
+            isCreating = false;
+            // Reload the page to refresh data
+            window.location.reload();
+          } else {
+            createFormError = result.error || "Failed to create project";
+          }
+        })
+        .catch((error) => {
+          console.error("Form submission failed:", error);
+          createFormError = "Failed to submit form. Please try again.";
+        });
+    } catch (error) {
+      console.error("Encryption failed:", error);
+      createFormError = "Failed to encrypt project data. Please try again.";
+    }
   }
 </script>
 
@@ -486,6 +569,7 @@
             }
           };
         }}
+        onsubmit={handleCreateProjectSubmit}
       >
         <div class="space-y-4">
           <div>

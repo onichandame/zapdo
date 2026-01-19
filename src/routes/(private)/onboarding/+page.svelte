@@ -1,5 +1,6 @@
 <script lang="ts">
   import { Lock, ShieldCheck, Key, Eye, EyeSlash } from "phosphor-svelte";
+  import { deriveKeyFromPassword, encryptWithKek, generateRsaKeyPair, exportKeyToJwk } from "$lib/crypto";
 
   // Form state
   let masterPassword = $state("");
@@ -48,51 +49,66 @@
     isSubmitting = true;
     errorMessage = "";
 
-    try {
-      // Generate key derivation parameters on client side
-      const keyDerivationSalt = crypto.randomUUID();
-      const keyDerivationIterations = 100000;
+      try {
+        // Generate key derivation parameters on client side
+        const keyDerivationSalt = crypto.randomUUID();
+        const keyDerivationIterations = 100000;
 
-      // TODO: In a real implementation, we would:
-      // 1. Derive KEK from masterPassword using PBKDF2 with the salt and iterations
-      // 2. Generate RSA key pair
-      // 3. Encrypt private key with derived KEK
-      // 4. Send only the public key, encrypted private key, salt, and iterations to server
+        // 1. Derive KEK from masterPassword using PBKDF2 with the salt and iterations
+        const kek = await deriveKeyFromPassword(masterPassword, keyDerivationSalt, keyDerivationIterations);
 
-      // For now, using placeholders as requested (master password never sent to backend)
-      const publicKey = "placeholder-public-key";
-      const encryptedPrivateKey = "placeholder-encrypted-private-key";
+        // 2. Generate RSA key pair for secure messaging between users
+        const { publicKey, privateKey } = await generateRsaKeyPair();
 
-      // Create FormData instead of JSON
-      const formData = new FormData();
-      formData.append("keyDerivationSalt", keyDerivationSalt);
-      formData.append(
-        "keyDerivationIterations",
-        keyDerivationIterations.toString(),
-      );
-      formData.append("publicKey", publicKey);
-      formData.append("encryptedPrivateKey", encryptedPrivateKey);
+        // 3. Export keys to JWK format
+        const publicJwk = await exportKeyToJwk(publicKey);
+        const privateJwk = await exportKeyToJwk(privateKey);
 
-      const response = await fetch("/onboarding", {
-        method: "POST",
-        body: formData,
-      });
+        // 4. Encrypt private key with derived KEK
+        const encoder = new TextEncoder();
+        const privateJwkString = JSON.stringify(privateJwk);
+        const privateJwkBuffer = encoder.encode(privateJwkString).buffer;
+        const { encryptedData, iv } = await encryptWithKek(privateJwkBuffer, kek);
 
-      const result: { error?: string } = await response.json();
+        // 5. Encode everything to base64 for storage/transmission
+        const publicKeyBase64 = btoa(JSON.stringify(publicJwk));
+        const encryptedPrivateKeyBase64 = encryptedData; // Already base64 from encryptWithKek
+        const ivBase64 = iv; // Already base64 from encryptWithKek
 
-      if (response.ok) {
-        // Redirect to tasks page after successful setup
-        window.location.href = "/tasks";
-      } else {
-        errorMessage =
-          result.error || "Failed to set master password. Please try again.";
+        // 6. Send only the public key, encrypted private key, salt, and iterations to server
+        // The IV is stored with the encrypted private key (concatenated)
+        const encryptedPrivateKeyWithIv = encryptedPrivateKeyBase64 + ':' + ivBase64;
+
+        // Create FormData instead of JSON
+        const formData = new FormData();
+        formData.append("keyDerivationSalt", keyDerivationSalt);
+        formData.append(
+          "keyDerivationIterations",
+          keyDerivationIterations.toString(),
+        );
+        formData.append("publicKey", publicKeyBase64);
+        formData.append("encryptedPrivateKey", encryptedPrivateKeyWithIv);
+
+        const response = await fetch("/onboarding", {
+          method: "POST",
+          body: formData,
+        });
+
+        const result: { error?: string } = await response.json();
+
+        if (response.ok) {
+          // Redirect to tasks page after successful setup
+          window.location.href = "/tasks";
+        } else {
+          errorMessage =
+            result.error || "Failed to set master password. Please try again.";
+        }
+      } catch (error) {
+        errorMessage = "An error occurred. Please try again.";
+        console.error("Onboarding error:", error);
+      } finally {
+        isSubmitting = false;
       }
-    } catch (error) {
-      errorMessage = "An error occurred. Please try again.";
-      console.error("Onboarding error:", error);
-    } finally {
-      isSubmitting = false;
-    }
   }
 
   function getPasswordStrengthColor() {
