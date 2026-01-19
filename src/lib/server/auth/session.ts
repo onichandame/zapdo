@@ -57,8 +57,18 @@ export async function validateSession(
   sessionId: string
 ) {
   const session = await db.query.session.findFirst({
-    where: (session, { eq }) => eq(session.id, sessionId)
-    , with: { user: { with: { oauthAccounts: true } } }
+    where: (session, { eq }) => eq(session.id, sessionId),
+    with: {
+      user: {
+        with: {
+          oauthAccounts: true,
+          keks: {
+            orderBy: (userKek, { desc }) => [desc(userKek.keyVersion)],
+            limit: 1
+          }
+        }
+      }
+    }
   });
 
   if (!session) {
@@ -74,6 +84,38 @@ export async function validateSession(
   }
 
   return session;
+}
+
+export async function createUserKek(
+  db: Database,
+  userId: string,
+  keyDerivationSalt: string,
+  keyDerivationIterations: number,
+  publicKey: string,
+  encryptedPrivateKey: string
+): Promise<schema.UserKek> {
+  const kekId = crypto.randomUUID();
+
+  const lastKek = await db.query.userKek.findFirst({ where: (userKek, { eq }) => eq(userKek.userId, userId), orderBy: (kek, { desc }) => desc(kek.keyVersion), })
+
+  const [newKek] = await db.insert(schema.userKek).values({
+    id: kekId,
+    userId,
+    keyDerivationSalt,
+    keyDerivationIterations,
+    keyDerivationAlgorithm: 'PBKDF2-SHA256',
+    publicKey,
+    encryptedPrivateKey,
+    asymmetricAlgorithm: 'RSA-OAEP',
+    keyFormat: 'JWK',
+    keyVersion: (lastKek?.keyVersion || 0) + 1
+  }).returning();
+
+  if (!newKek) {
+    throw new Error('Failed to create KEK record');
+  }
+
+  return newKek;
 }
 
 /**

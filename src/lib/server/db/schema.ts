@@ -100,7 +100,7 @@ export const userRelations = relations(user, ({ many }) => ({
   projects: many(project, {
     relationName: 'userProjects'
   }),
-  kek: many(userKek, { relationName: `userkek` }),
+  keks: many(userKek, { relationName: `userkek` }),
   deks: many(userProjectDek, { relationName: 'userDeks' })
 }));
 
