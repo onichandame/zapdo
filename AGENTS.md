@@ -2,6 +2,7 @@
 **Do not run parallel background tasks, concurrency is not allowed here**
 **Do not make commits until user EXPLICITLY asks**
 **Always make sure `npm run check` passes**
+**Do not ignore typing error with `any`, fix the errors or ask for user permission before ignoring**
 
 You are able to use the Svelte MCP server, where you have access to comprehensive Svelte 5 and SvelteKit documentation. Here's how to use the available tools effectively:
 

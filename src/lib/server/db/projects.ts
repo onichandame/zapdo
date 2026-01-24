@@ -12,6 +12,7 @@ export async function getAllUserProjects(
   const projects = await db.query.project.findMany({
     where: (project, { eq }) => eq(project.userId, userId),
     orderBy: (project, { desc }) => [desc(project.createdAt)],
+    with: { deks: { where: (proj, { eq }) => eq(proj.userId, userId), limit: 1 } }
   });
 
   return projects;

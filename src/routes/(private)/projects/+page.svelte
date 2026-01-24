@@ -12,14 +12,22 @@
     Book,
     GearSix,
     PencilSimple,
+    ArrowClockwise,
   } from "phosphor-svelte";
   import { enhance } from "$app/forms";
-  import { goto } from "$app/navigation";
+  import { goto, invalidateAll } from "$app/navigation";
   import type { Attachment } from "svelte/attachments";
   import { generateAesKey, exportAesKey, encryptWithAesGcm } from "$lib/crypto";
   import { kekStore } from "$lib/stores/kekStore";
+  import { dekStore } from "$lib/stores/dekStore";
+  import { decryptDataWithDek } from "$lib/utils/decryptData";
 
   let { data, form } = $props();
+
+  // Decrypted projects state
+  let decryptedProjects = $state<any[]>([]);
+  let decryptionErrors = $state<Record<string, string>>({});
+  let isDecrypting = $state(true);
 
   let isDeleting = $state(false);
   let deleteProjectId = $state("");
@@ -42,6 +50,8 @@
   let createProjectIcon = $state("folder");
   let createProjectParentId = $state<string | null>(null);
   let createFormError = $state("");
+
+  let isRefreshing = $state(false);
 
   // Create attachment functions
   const deleteClickOutside: Attachment<HTMLElement> = (node) => {
@@ -148,6 +158,18 @@
     createFormError = "";
   }
 
+  async function refreshProjects() {
+    isRefreshing = true;
+    try {
+      // Invalidate all data to trigger re-fetch from server
+      await invalidateAll();
+    } catch (error) {
+      console.error("Refresh failed:", error);
+    } finally {
+      isRefreshing = false;
+    }
+  }
+
   // Handle Escape key to close dialogs
   $effect(() => {
     if (isCreating || isEditing || deleteProjectId) {
@@ -170,6 +192,101 @@
     }
   });
 
+  // Auto-refresh when user returns to tab
+  $effect(() => {
+    const handleFocus = () => {
+      // Small delay to avoid refreshing immediately on load
+      setTimeout(() => {
+        if (!isRefreshing && !isCreating && !isEditing && !deleteProjectId) {
+          refreshProjects();
+        }
+      }, 1000);
+    };
+
+    window.addEventListener("focus", handleFocus);
+    return () => window.removeEventListener("focus", handleFocus);
+  });
+
+  // Decrypt projects when data or DEKs change
+  $effect(() => {
+    if (!data?.projects || data.projects.length === 0) {
+      decryptedProjects = [];
+      isDecrypting = false;
+      return;
+    }
+
+    isDecrypting = true;
+
+    // Create a function to handle async decryption
+    const decryptProjects = async () => {
+      const deks = $dekStore;
+      const newDecryptedProjects: (typeof data.projects)[number][] = [];
+      const newDecryptionErrors: Record<string, string> = {};
+
+      for (const project of data!.projects) {
+        try {
+          const dek = deks[project.id];
+          if (!dek) {
+            newDecryptionErrors[project.id] = "DEK not available";
+            // Create a copy of the original project with error message
+            const errorProject = {
+              ...project,
+              name: "[Decryption Error: DEK missing]",
+              description: "",
+            };
+            newDecryptedProjects.push(errorProject);
+            continue;
+          }
+
+          const encryptedName = JSON.parse(project.name);
+          const encryptedDescription = project.description
+            ? JSON.parse(project.description)
+            : null;
+
+          const decryptedName = await decryptDataWithDek(encryptedName, dek);
+          const decryptedDescription = await decryptDataWithDek(
+            encryptedDescription,
+            dek,
+          );
+
+          const decryptedData = {
+            id: project.id,
+            name: decryptedName,
+            description: decryptedDescription,
+            color: project.color,
+            icon: project.icon,
+            parentId: project.parentId,
+            hasSubprojects: project.hasSubprojects,
+            subprojectsCount: project.subprojectsCount,
+          };
+          // Create a copy of the original project with decrypted data
+          const decryptedProject = {
+            ...project,
+            name: decryptedData.name,
+            description: decryptedData.description,
+          };
+          newDecryptedProjects.push(decryptedProject);
+        } catch (error) {
+          console.error(`Failed to decrypt project ${project.id}:`, error);
+          newDecryptionErrors[project.id] = "Decryption failed";
+          // Create a copy of the original project with error message
+          const errorProject = {
+            ...project,
+            name: "[Decryption Error]",
+            description: "",
+          };
+          newDecryptedProjects.push(errorProject);
+        }
+      }
+
+      decryptedProjects = newDecryptedProjects;
+      decryptionErrors = newDecryptionErrors;
+      isDecrypting = false;
+    };
+
+    decryptProjects().catch(console.error);
+  });
+
   // Navigate to subprojects view
   async function navigateToSubprojects(projectId: string) {
     const url = new URL(window.location.href);
@@ -190,9 +307,11 @@
     // Build the breadcrumb path from root to current parent
     if (data.breadcrumbPath)
       pathNames.push(
-        ...data.breadcrumbPath?.map(
-          (project: { name: string }) => project.name,
-        ),
+        ...data.breadcrumbPath?.map((project: { id: string; name: string }) => {
+          // Find the decrypted version of this project
+          const decrypted = decryptedProjects.find((p) => p.id === project.id);
+          return decrypted ? decrypted.name : project.name;
+        }),
       );
     return pathNames.join(" > ");
   }
@@ -206,19 +325,7 @@
 
     try {
       // Get cached KEK from store
-      const kek = await new Promise<CryptoKey>((resolve) => {
-        const unsubscribe = kekStore.subscribe(
-          (cachedKek: CryptoKey | null) => {
-            unsubscribe();
-            if (!cachedKek) {
-              createFormError =
-                "KEK not available. Please unlock your account first.";
-              return;
-            }
-            resolve(cachedKek);
-          },
-        );
-      });
+      const kek = $kekStore;
 
       // Generate a new DEK for this project
       const dek = await generateAesKey();
@@ -234,7 +341,7 @@
         : null;
 
       // Encrypt the DEK with the cached KEK
-      const encryptedDekComponents = await encryptWithAesGcm(exportedDek, kek);
+      const encryptedDekComponents = await encryptWithAesGcm(exportedDek, kek!);
       const encryptedDek = JSON.stringify(encryptedDekComponents);
 
       // Update form data with encrypted values
@@ -259,11 +366,17 @@
           const result = (await response.json()) as {
             success?: boolean;
             error?: string;
+            project?: any;
           };
-          if (result.success) {
+          if (result.success && result.project) {
+            // Add the new DEK to the store for immediate decryption
+            const deks = $dekStore;
+            deks[result.project.id] = dek;
+            $dekStore = { ...deks };
+
             isCreating = false;
-            // Reload the page to refresh data
-            window.location.reload();
+            // Invalidate all data to trigger re-fetch and re-decryption
+            await invalidateAll();
           } else {
             createFormError = result.error || "Failed to create project";
           }
@@ -293,25 +406,41 @@
   {/if}
 </header>
 
-{#if data?.projects && data.projects.length === 0}
+<div>{isDecrypting} {decryptedProjects}</div>
+{#if isDecrypting}
   <div class="text-center py-12">
-    <div class="text-muted-foreground mb-4">No projects yet</div>
-    <button
-      class="flex items-center gap-3 px-6 py-3 bg-primary text-primary-foreground rounded-lg border border-border hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer"
-      onclick={() => showCreateDialog(data?.currentParentId || null)}
-    >
-      <Plus size={20} />
-      <span>
-        {#if data?.currentParentId}
-          Create Subproject
-        {:else}
-          Create Your First Project
-        {/if}
-      </span>
-    </button>
+    <div class="flex items-center justify-center gap-2">
+      <div
+        class="w-6 h-6 border-2 border-current border-t-transparent rounded-full animate-spin"
+      ></div>
+      <span class="text-muted-foreground">Decrypting your projects...</span>
+    </div>
   </div>
+{:else if decryptedProjects.length === 0}
+  {#if data?.projects && data.projects.length === 0}
+    <div class="text-center py-12">
+      <div class="text-muted-foreground mb-4">No projects yet</div>
+      <button
+        class="flex items-center gap-3 px-6 py-3 bg-primary text-primary-foreground rounded-lg border border-border hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer"
+        onclick={() => showCreateDialog(data?.currentParentId || null)}
+      >
+        <Plus size={20} />
+        <span>
+          {#if data?.currentParentId}
+            Create Subproject
+          {:else}
+            Create Your First Project
+          {/if}
+        </span>
+      </button>
+    </div>
+  {:else}
+    <div class="text-center py-12">
+      <div class="text-muted-foreground mb-4">No projects to display</div>
+    </div>
+  {/if}
 {:else}
-  {#each data?.projects as project (project.id)}
+  {#each decryptedProjects as project (project.id)}
     <div class="group project-item mb-4">
       <div
         class="flex items-center gap-4 p-6 sm:p-8 bg-primary text-primary-foreground rounded-lg border border-border shadow-card transition-all hover:bg-accent hover:border-muted hover:text-accent-foreground hover:shadow-none cursor-pointer"
@@ -446,13 +575,28 @@
     </div>
   {/each}
 
-  <div class="mt-8">
+  <div class="mt-8 flex gap-3">
     <button
       class="flex items-center gap-3 px-6 py-3 bg-primary text-primary-foreground rounded-lg border border-border hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer"
       onclick={() => showCreateDialog(data?.currentParentId || null)}
     >
       <Plus size={20} />
       <span>Create New Project</span>
+    </button>
+    <button
+      class="flex items-center gap-2 px-4 py-3 bg-muted text-muted-foreground rounded-lg border border-border hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer"
+      onclick={refreshProjects}
+      disabled={isRefreshing}
+    >
+      {#if isRefreshing}
+        <span
+          class="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin"
+        ></span>
+        Refreshing...
+      {:else}
+        <ArrowClockwise size={16} />
+        Refresh
+      {/if}
     </button>
   </div>
 {/if}

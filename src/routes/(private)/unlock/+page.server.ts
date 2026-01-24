@@ -1,3 +1,4 @@
+import { getAllUserProjects } from '$lib/server/db/projects.js';
 import type { UserKek } from '$lib/server/db/schema';
 
 export const load = async ({ url, locals }) => {
@@ -10,8 +11,11 @@ export const load = async ({ url, locals }) => {
   // Get redirect URL from query params
   const redirectUrl = url.searchParams.get('redirect') || '/tasks';
 
+  const projects = await getAllUserProjects(locals.db, session!.user.id)
+
   return {
     userKeks,
     redirectUrl
+    , projects
   };
 };

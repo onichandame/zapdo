@@ -1,8 +1,14 @@
 <script lang="ts">
   import { goto } from "$app/navigation";
   import { kekStore } from "$lib/stores/kekStore";
-  import { deriveKeyFromPassword, decryptWithKek } from "$lib/crypto";
+  import {
+    deriveKeyFromPassword,
+    decryptWithKek,
+    decryptWithAesGcm,
+    importAesKey,
+  } from "$lib/crypto";
   import type { UserKek } from "$lib/server/db/schema";
+  import { dekStore } from "$lib/stores/dekStore.js";
 
   let { data } = $props();
 
@@ -22,14 +28,28 @@
       );
 
       // Parse the encrypted private key (which includes IV)
-      const [encryptedPrivateKeyBase64, ivBase64] = latestKek.encryptedPrivateKey.split(':');
-      
+      const [encryptedPrivateKeyBase64, ivBase64] =
+        latestKek.encryptedPrivateKey.split(":");
+
       // Try to decrypt the private key to validate the password
       await decryptWithKek(encryptedPrivateKeyBase64, ivBase64, kek);
 
       // If decryption succeeds, password is valid
       // Store the KEK in memory
-      kekStore.set(kek);
+      $kekStore = kek;
+
+      for (const proj of data.projects) {
+        const encryptedDek = JSON.parse(proj.deks[0].encryptedDek) as {
+          encryptedData: string;
+          iv: string;
+        };
+        const dek = await decryptWithAesGcm(
+          encryptedDek.encryptedData,
+          encryptedDek.iv,
+          kek,
+        ).then((str) => importAesKey(str));
+        $dekStore[proj.id] = dek;
+      }
 
       return true;
     } catch (err) {
@@ -125,4 +145,3 @@
     </form>
   </div>
 </div>
-

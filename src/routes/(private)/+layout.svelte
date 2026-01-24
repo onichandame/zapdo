@@ -4,31 +4,19 @@
   import { page } from "$app/state";
   import { kekStore } from "$lib/stores/kekStore";
   import { goto } from "$app/navigation";
-  import { onMount, onDestroy } from "svelte";
 
   let { children } = $props();
 
-  const skipKekCheck =
-    page.url.pathname.startsWith("/unlock") ||
-    page.url.pathname.startsWith("/onboarding");
-
-  if (!skipKekCheck) {
-    let unsubscribe: () => void;
-    onMount(() => {
-      unsubscribe = kekStore.subscribe((kek) => {
-        if (!kek) {
-          const redirectUrl = `/unlock?redirect=${encodeURIComponent(page.url.pathname + page.url.search)}`;
-          goto(redirectUrl);
-        }
-      });
-    });
-
-    onDestroy(() => {
-      if (unsubscribe) {
-        unsubscribe();
-      }
-    });
-  }
+  $effect(() => {
+    const skipKekCheck =
+      page.url.pathname.startsWith("/unlock") ||
+      page.url.pathname.startsWith("/onboarding");
+    if (skipKekCheck) return;
+    if (!$kekStore) {
+      const redirectUrl = `/unlock?redirect=${encodeURIComponent(page.url.pathname + page.url.search)}`;
+      goto(redirectUrl);
+    }
+  });
 
   function isActive(path: string): boolean {
     return page.url.pathname.startsWith(path);
