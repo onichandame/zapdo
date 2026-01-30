@@ -13,9 +13,9 @@
   class="bg-primary text-primary-foreground rounded-lg border border-border shadow-card p-6 sm:p-8"
 >
   <div class="flex items-center gap-4 mb-6">
-    {#if data?.user?.avatarUrl}
+    {#if data?.user?.pictureUrl}
       <img
-        src={data.user.avatarUrl}
+        src={data.user.pictureUrl}
         alt="User avatar"
         class="w-16 h-16 rounded-full object-cover"
       />

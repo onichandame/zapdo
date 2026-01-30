@@ -33,7 +33,7 @@ export const GET: RequestHandler = async ({ platform, url, cookies, locals }) =>
       providerAccountId: userInfo.sub,
       email: userInfo.email,
       name: userInfo.name,
-      avatarUrl: userInfo.picture,
+      pictureUrl: userInfo.picture,
       accessToken: tokens.access_token,
       refreshToken: tokens.refresh_token,
       expiresAt: new Date(Date.now() + tokens.expires_in * 1000),

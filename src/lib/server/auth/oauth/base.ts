@@ -63,7 +63,7 @@ interface FindOrCreateUserParams {
   providerAccountId: string;
   email: string;
   name: string;
-  avatarUrl?: string;
+  pictureUrl?: string;
   accessToken?: string;
   refreshToken?: string;
   expiresAt?: Date;
@@ -137,7 +137,7 @@ export abstract class OAuthProviderBase {
    * @returns AuthResult with the user record and whether it's new
    */
   async findOrCreateUser(params: FindOrCreateUserParams): Promise<AuthResult> {
-    const { db, providerAccountId, email, name, avatarUrl, accessToken, refreshToken, expiresAt, scope } = params;
+    const { db, providerAccountId, email, name, pictureUrl, accessToken, refreshToken, expiresAt, scope } = params;
 
     // Check if oauth account exists
     const existingAccount = await db.query.oauthAccount.findFirst({
@@ -191,19 +191,16 @@ export abstract class OAuthProviderBase {
     }
 
     // Create new user
-    const userId = crypto.randomUUID();
     const [user] = await db.insert(schema.user).values({
-      id: userId,
       email,
       name,
-      avatarUrl,
-      emailVerified: true
+      pictureUrl
     }).returning();
 
     const accountId = crypto.randomUUID();
     await db.insert(schema.oauthAccount).values({
       id: accountId,
-      userId,
+      userId: user.id,
       provider: this.provider,
       providerAccountId,
       accessToken,

@@ -27,3 +27,7 @@ vite.config.ts.timestamp-*
 
 # SQLite
 *.db
+
+# Sisyphus and spec
+.sisyphus
+spec

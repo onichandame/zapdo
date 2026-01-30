@@ -406,7 +406,6 @@
   {/if}
 </header>
 
-<div>{isDecrypting} {decryptedProjects}</div>
 {#if isDecrypting}
   <div class="text-center py-12">
     <div class="flex items-center justify-center gap-2">
@@ -773,7 +772,7 @@
               class="w-full px-3 py-2 bg-primary text-primary-foreground border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
             >
               <option value="">None (Root Level)</option>
-              {#each data.allProjects as project}
+              {#each decryptedProjects as project}
                 <option value={project.id}>
                   {project.name}
                 </option>
@@ -952,7 +951,7 @@
               class="w-full px-3 py-2 bg-primary text-primary-foreground border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
             >
               <option value="">None (Root Level)</option>
-              {#each data.allProjects as project}
+              {#each decryptedProjects as project}
                 {#if project.id !== editProjectId}
                   <option value={project.id}>
                     {project.name}

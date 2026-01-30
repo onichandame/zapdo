@@ -1,12 +1,14 @@
 import { index, integer, sqliteTable, text, uniqueIndex, type AnySQLiteColumn } from 'drizzle-orm/sqlite-core';
 import { relations } from 'drizzle-orm';
 
+export type OAuthProvider = 'google' | 'github';
+
 export const user = sqliteTable('user', {
   id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
   email: text('email').notNull().unique(),
   name: text('name').notNull(),
-  avatarUrl: text('avatar_url'),
-  emailVerified: integer('email_verified', { mode: 'boolean' }).notNull().default(true),
+  pictureUrl: text('picture_url'),
+  kekPublicKey: text('kek_public_key'),
   createdAt: text('created_at').notNull().$defaultFn(() => new Date().toISOString()),
   updatedAt: text('updated_at').notNull().$defaultFn(() => new Date().toISOString())
 });
@@ -101,7 +103,8 @@ export const userRelations = relations(user, ({ many }) => ({
     relationName: 'userProjects'
   }),
   keks: many(userKek, { relationName: `userkek` }),
-  deks: many(userProjectDek, { relationName: 'userDeks' })
+  deks: many(userProjectDek, { relationName: 'userDeks' }),
+  devices: many(devices)
 }));
 
 export const oauthAccountRelations = relations(oauthAccount, ({ one }) => ({
@@ -165,6 +168,25 @@ export const userProjectDekRelations = relations(userProjectDek, ({ one }) => ({
   userKek: one(userKek, { fields: [userProjectDek.userKekId], references: [userKek.id], relationName: `userKeks` })
 }));
 
+export const devices = sqliteTable(
+  'devices',
+  {
+    id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+    userId: text('user_id')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    name: text('name').notNull(),
+    type: text('type').notNull(),
+    publicKey: text('public_key').notNull(),
+    serverPrivateKey: text('server_private_key').notNull(),
+    createdAt: text('created_at').notNull().$defaultFn(() => new Date().toISOString()),
+    updatedAt: text('updated_at').notNull().$defaultFn(() => new Date().toISOString())
+  },
+  (table) => [
+    index('devices_user_id_idx').on(table.userId)
+  ]
+);
+
 export const projectRelations = relations(project, ({ one, many }) => ({
   user: one(user, {
     fields: [project.userId],
@@ -181,6 +203,13 @@ export const projectRelations = relations(project, ({ one, many }) => ({
   deks: many(userProjectDek, { relationName: 'projectDeks' })
 }));
 
+export const devicesRelations = relations(devices, ({ one }) => ({
+  user: one(user, {
+    fields: [devices.userId],
+    references: [user.id]
+  })
+}));
+
 export type User = typeof user.$inferSelect;
 export type NewUser = typeof user.$inferInsert;
 export type Session = typeof session.$inferSelect;
@@ -191,3 +220,5 @@ export type UserKek = typeof userKek.$inferSelect;
 export type NewUserKek = typeof userKek.$inferInsert;
 export type UserProjectDek = typeof userProjectDek.$inferSelect;
 export type NewUserProjectDek = typeof userProjectDek.$inferInsert;
+export type Device = typeof devices.$inferSelect;
+export type NewDevice = typeof devices.$inferInsert;
