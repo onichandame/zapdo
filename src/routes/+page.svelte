@@ -3,11 +3,6 @@
 </script>
 
 <div class="landing-page min-h-screen bg-background text-foreground relative">
-  <div
-    class="absolute top-4 right-4 sm:top-6 sm:right-6 bg-green-500 text-white text-xs font-bold px-3 py-1 rounded-lg shadow-md"
-  >
-    Free for limited time
-  </div>
   <section class="hero py-16 px-4 sm:px-6 lg:px-8">
     <div class="max-w-7xl mx-auto">
       <div class="text-center">

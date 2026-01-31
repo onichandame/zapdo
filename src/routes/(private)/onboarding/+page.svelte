@@ -46,11 +46,13 @@
         }),
       });
 
-      const result: { error?: string; success?: boolean } =
+      const result: { error?: string; success?: boolean; deviceId?: string } =
         await response.json();
 
       if (response.ok && result.success) {
         // Device registration is confirmed by successful response
+        // Store the device ID in localStorage for future authentication
+        setStorageItem(STORAGE_KEYS.DEVICE_ID, result.deviceId);
         hasCompleted = true;
         isProcessing = false;
       } else {

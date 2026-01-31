@@ -3,6 +3,7 @@ import { browser } from '$app/environment';
 export const STORAGE_KEYS = {
   KEK_PRIVATE_KEY: 'zapdo_kek_private_key',
   DEVICE_AUTH_PRIVATE_KEY: 'zapdo_device_auth_private_key',
+  DEVICE_ID: 'zapdo_device_id',
 } as const;
 
 export function setStorageItem(key: string, value: unknown): void {

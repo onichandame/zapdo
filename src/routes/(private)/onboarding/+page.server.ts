@@ -47,22 +47,21 @@ export const actions = {
         })
         .where(eq(schema.user.id, session.user.id));
 
-      const deviceId = crypto.randomUUID();
       const deviceName = 'First Device';
       const deviceType = 'browser';
 
-      await locals.db.insert(schema.devices).values({
-        id: deviceId,
+      const [device] = await locals.db.insert(schema.devices).values({
         userId: session.user.id,
         name: deviceName,
         type: deviceType,
         publicKey: authPublicKey,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
-      });
+      }).returning();
 
       return {
-        success: true
+        success: true,
+        deviceId: device.id
       };
     } catch (err) {
       console.error('Failed to complete onboarding:', err);
