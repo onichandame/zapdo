@@ -1,17 +1,17 @@
 import { error, redirect } from '@sveltejs/kit';
-import type { RequestEvent } from '@sveltejs/kit';
-import { createUserKek } from '$lib/server/auth/session';
+import * as schema from '$lib/server/db/schema';
+import { eq } from 'drizzle-orm';
 
-export const load = async ({ locals }: RequestEvent) => {
+export const load = async ({ locals }) => {
   const session = locals.session;
 
   if (!session) {
     throw redirect(303, '/login');
   }
 
-  const hasKek = !!locals.session?.user.keks.length
+  const hasCompletedPasswordlessOnboarding = !!locals.session?.user.kekPublicKey;
 
-  if (hasKek) {
+  if (hasCompletedPasswordlessOnboarding) {
     throw redirect(303, '/tasks');
   }
 
@@ -28,35 +28,46 @@ export const actions = {
       throw error(401, 'Unauthorized');
     }
 
-    const formData = await request.formData();
-    const keyDerivationSalt = formData.get('keyDerivationSalt') as string;
-    const keyDerivationIterations = parseInt(formData.get('keyDerivationIterations') as string);
-    const publicKey = formData.get('publicKey') as string;
-    const encryptedPrivateKey = formData.get('encryptedPrivateKey') as string;
+    const data: { authPublicKey?: string; kekPublicKey?: string } = await request.json();
+    const authPublicKey = data.authPublicKey;
+    const kekPublicKey = data.kekPublicKey;
 
-    if (!keyDerivationSalt || !keyDerivationIterations || !publicKey || !encryptedPrivateKey) {
+    if (!authPublicKey || !kekPublicKey) {
       return {
-        error: 'Required fields are missing'
+        error: 'Both authPublicKey and kekPublicKey are required'
       };
     }
 
     try {
-      await createUserKek(
-        locals.db,
-        session.user.id,
-        keyDerivationSalt,
-        keyDerivationIterations,
-        publicKey,
-        encryptedPrivateKey
-      );
+      await locals.db
+        .update(schema.user)
+        .set({
+          kekPublicKey,
+          updatedAt: new Date().toISOString()
+        })
+        .where(eq(schema.user.id, session.user.id));
+
+      const deviceId = crypto.randomUUID();
+      const deviceName = 'First Device';
+      const deviceType = 'browser';
+
+      await locals.db.insert(schema.devices).values({
+        id: deviceId,
+        userId: session.user.id,
+        name: deviceName,
+        type: deviceType,
+        publicKey: authPublicKey,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      });
 
       return {
         success: true
       };
     } catch (err) {
-      console.error('Failed to create master password:', err);
+      console.error('Failed to complete onboarding:', err);
       return {
-        error: 'Failed to set master password. Please try again.'
+        error: 'Failed to complete onboarding. Please try again.'
       };
     }
   }

@@ -162,16 +162,14 @@ export async function decryptWithKek(
   return decryptedData;
 }
 
-export async function generateRsaKeyPair() {
+export async function generateEcP256KeyPair() {
   const keyPair = await crypto.subtle.generateKey(
     {
-      name: 'RSA-OAEP',
-      modulusLength: 2048,
-      publicExponent: new Uint8Array([1, 0, 1]),
-      hash: 'SHA-256'
+      name: 'ECDH',
+      namedCurve: 'P-256'
     },
     true,
-    ['encrypt', 'decrypt']
+    ['deriveKey', 'deriveBits']
   );
 
   return {
@@ -180,52 +178,79 @@ export async function generateRsaKeyPair() {
   };
 }
 
-export async function exportKeyToJwk(key: CryptoKey) {
+export async function exportEcKeyToJwk(key: CryptoKey) {
   const jwk = await crypto.subtle.exportKey('jwk', key);
   return jwk;
 }
 
-export async function importJwkToKey(jwk: JsonWebKey, keyType: 'public' | 'private') {
+export async function importEcJwkToKey(jwk: JsonWebKey, keyType: 'public' | 'private') {
   const key = await crypto.subtle.importKey(
     'jwk',
     jwk,
     {
-      name: 'RSA-OAEP',
-      hash: 'SHA-256'
+      name: 'ECDH',
+      namedCurve: 'P-256'
     },
     true,
-    keyType === 'public' ? ['encrypt'] : ['decrypt']
+    keyType === 'public' ? [] : ['deriveKey', 'deriveBits']
   );
   
   return key;
 }
 
-export async function encryptWithRsaOaep(plaintext: string, publicKey: CryptoKey) {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(plaintext);
-  
-  const encrypted = await crypto.subtle.encrypt(
+export async function deriveSharedSecret(privateKey: CryptoKey, publicKey: CryptoKey) {
+  const sharedSecret = await crypto.subtle.deriveBits(
     {
-      name: 'RSA-OAEP'
+      name: 'ECDH',
+      public: publicKey
     },
-    publicKey,
+    privateKey,
+    256
+  );
+  return sharedSecret;
+}
+
+export async function generateEcdsaP256KeyPair() {
+  const keyPair = await crypto.subtle.generateKey(
+    {
+      name: 'ECDSA',
+      namedCurve: 'P-256'
+    },
+    true,
+    ['sign', 'verify']
+  );
+
+  return {
+    publicKey: keyPair.publicKey,
+    privateKey: keyPair.privateKey
+  };
+}
+
+export async function signWithEcdsa(privateKey: CryptoKey, data: ArrayBuffer): Promise<string> {
+  const signature = await crypto.subtle.sign(
+    {
+      name: 'ECDSA',
+      hash: { name: 'SHA-256' }
+    },
+    privateKey,
     data
   );
   
-  return arrayBufferToBase64(encrypted);
+  return arrayBufferToBase64(signature);
 }
 
-export async function decryptWithRsaOaep(encryptedData: string, privateKey: CryptoKey) {
-  const encryptedDataBuffer = base64ToArrayBuffer(encryptedData);
+export async function verifyEcdsaSignature(publicKey: CryptoKey, signature: string, data: ArrayBuffer): Promise<boolean> {
+  const signatureBuffer = base64ToArrayBuffer(signature);
   
-  const decrypted = await crypto.subtle.decrypt(
+  const isValid = await crypto.subtle.verify(
     {
-      name: 'RSA-OAEP'
+      name: 'ECDSA',
+      hash: { name: 'SHA-256' }
     },
-    privateKey,
-    encryptedDataBuffer
+    publicKey,
+    signatureBuffer,
+    data
   );
   
-  const decoder = new TextDecoder();
-  return decoder.decode(decrypted);
+  return isValid;
 }

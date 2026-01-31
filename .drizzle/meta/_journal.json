@@ -1,75 +1,12 @@
 {
-  "version": "6",
+  "version": "7",
   "dialect": "sqlite",
   "entries": [
     {
       "idx": 0,
       "version": "6",
-      "when": 1768458614023,
-      "tag": "0000_gigantic_morlocks",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "6",
-      "when": 1768469179135,
-      "tag": "0001_powerful_phalanx",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "6",
-      "when": 1768491186196,
-      "tag": "0002_high_annihilus",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "6",
-      "when": 1768639364153,
-      "tag": "0003_hesitant_leper_queen",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "6",
-      "when": 1768662284268,
-      "tag": "0004_chilly_lady_ursula",
-      "breakpoints": true
-    },
-    {
-      "idx": 5,
-      "version": "6",
-      "when": 1768762350054,
-      "tag": "0005_fresh_karma",
-      "breakpoints": true
-    },
-    {
-      "idx": 6,
-      "version": "6",
-      "when": 1768762948451,
-      "tag": "0006_smooth_leader",
-      "breakpoints": true
-    },
-    {
-      "idx": 7,
-      "version": "6",
-      "when": 1768763303436,
-      "tag": "0007_empty_rick_jones",
-      "breakpoints": true
-    },
-    {
-      "idx": 8,
-      "version": "6",
-      "when": 1768763595437,
-      "tag": "0008_thankful_eddie_brock",
-      "breakpoints": true
-    },
-    {
-      "idx": 9,
-      "version": "6",
-      "when": 1769803601683,
-      "tag": "0009_bored_sebastian_shaw",
+      "when": 1769885124607,
+      "tag": "0000_special_slipstream",
       "breakpoints": true
     }
   ]

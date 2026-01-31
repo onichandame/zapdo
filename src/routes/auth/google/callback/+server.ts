@@ -28,7 +28,7 @@ export const GET: RequestHandler = async ({ platform, url, cookies, locals }) =>
     const tokens = await googleOAuth.exchangeCodeForTokens(code);
     const userInfo = await googleOAuth.getUserInfo(tokens.access_token);
 
-    const { user, isNewUser } = await googleOAuth.findOrCreateUser({
+    const { user } = await googleOAuth.findOrCreateUser({
       db: locals.db,
       providerAccountId: userInfo.sub,
       email: userInfo.email,
@@ -48,6 +48,11 @@ export const GET: RequestHandler = async ({ platform, url, cookies, locals }) =>
       sameSite: 'lax',
       expires: new Date(session.expiresAt)
     });
+
+    const hasCompletedPasswordlessOnboarding = !!user.kekPublicKey;
+    if (!hasCompletedPasswordlessOnboarding) {
+      throw redirect(302, '/onboarding');
+    }
 
     throw redirect(302, '/tasks');
   } catch (err) {
