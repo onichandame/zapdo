@@ -8,6 +8,13 @@
       "when": 1769885124607,
       "tag": "0000_special_slipstream",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1770487085930,
+      "tag": "0001_greedy_white_tiger",
+      "breakpoints": true
     }
   ]
 }
