@@ -13,30 +13,6 @@ export const user = sqliteTable('user', {
   updatedAt: text('updated_at').notNull().$defaultFn(() => new Date().toISOString())
 });
 
-export const userKek = sqliteTable(
-  'user_kek',
-  {
-    id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
-    userId: text('user_id')
-      .notNull()
-      .references(() => user.id, { onDelete: 'cascade' }),
-    keyDerivationSalt: text('key_derivation_salt').notNull(),
-    keyDerivationIterations: integer('key_derivation_iterations').notNull().default(100000),
-    keyDerivationAlgorithm: text('key_derivation_algorithm').notNull().default('PBKDF2-SHA256'),
-    publicKey: text('public_key').notNull(),
-    encryptedPrivateKey: text('encrypted_private_key').notNull(),
-    asymmetricAlgorithm: text('asymmetric_algorithm').notNull().default('RSA-OAEP'),
-    keyFormat: text('key_format').notNull().default('JWK'),
-    keyVersion: integer('key_version').notNull().default(1),
-    createdAt: text('created_at').notNull().$defaultFn(() => new Date().toISOString()),
-    updatedAt: text('updated_at').notNull().$defaultFn(() => new Date().toISOString())
-  },
-  (table) => [
-    uniqueIndex('user_kek_user_id_key_version_idx').on(table.userId, table.keyVersion),
-    index('user_kek_user_id_idx').on(table.userId)
-  ]
-);
-
 export const oauthAccount = sqliteTable(
   'oauth_account',
   {
@@ -102,7 +78,6 @@ export const userRelations = relations(user, ({ many }) => ({
   projects: many(project, {
     relationName: 'userProjects'
   }),
-  keks: many(userKek, { relationName: `userkek` }),
   deks: many(userProjectDek, { relationName: 'userDeks' }),
   devices: many(devices),
   deviceRequests: many(deviceRequests)
@@ -122,15 +97,6 @@ export const sessionRelations = relations(session, ({ one }) => ({
   })
 }));
 
-export const userKekRelations = relations(userKek, ({ one, many }) => ({
-  user: one(user, {
-    fields: [userKek.userId],
-    references: [user.id]
-    , relationName: `userkek`
-  }),
-  projectDeks: many(userProjectDek, { relationName: `userKeks` })
-}));
-
 export const userProjectDek = sqliteTable(
   'user_project_dek',
   {
@@ -141,7 +107,6 @@ export const userProjectDek = sqliteTable(
     projectId: text('project_id')
       .notNull()
       .references(() => project.id, { onDelete: 'cascade' }),
-    userKekId: text('user_kek_id').notNull().references(() => userKek.id, { onDelete: 'set null' }),
     encryptedDek: text('encrypted_dek').notNull(),
     encryptionAlgorithm: text('encryption_algorithm').notNull().default('AES-GCM'),
     keyDerivationVersion: integer('key_derivation_version').notNull().default(1),
@@ -165,8 +130,7 @@ export const userProjectDekRelations = relations(userProjectDek, ({ one }) => ({
     fields: [userProjectDek.projectId],
     references: [project.id],
     relationName: 'projectDeks'
-  }),
-  userKek: one(userKek, { fields: [userProjectDek.userKekId], references: [userKek.id], relationName: `userKeks` })
+  })
 }));
 
 export const devices = sqliteTable(
@@ -246,8 +210,6 @@ export type Session = typeof session.$inferSelect;
 export type NewSession = typeof session.$inferInsert;
 export type Project = typeof project.$inferSelect;
 export type NewProject = typeof project.$inferInsert;
-export type UserKek = typeof userKek.$inferSelect;
-export type NewUserKek = typeof userKek.$inferInsert;
 export type UserProjectDek = typeof userProjectDek.$inferSelect;
 export type NewUserProjectDek = typeof userProjectDek.$inferInsert;
 export type Device = typeof devices.$inferSelect;
