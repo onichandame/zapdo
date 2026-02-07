@@ -6,10 +6,10 @@ export const load: LayoutServerLoad = async ({ locals, url }) => {
     throw redirect(302, '/login');
   }
 
-  const hasKek = locals.session.user.keks.length > 0
+  const hasKek = !!locals.session.user.kekPublicKey
 
-  if (!hasKek && !url.pathname.startsWith('/onboarding')) {
-    throw redirect(302, '/onboarding');
+  if (!hasKek) {
+    throw redirect(302, '/login');
   }
 
   return {};
