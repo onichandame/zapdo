@@ -14,6 +14,7 @@ declare global {
 
     interface Locals {
       session?: schema.Session & { user: schema.User & { oauthAccounts: schema.OAuthAccount[] } }
+      device?: schema.Device & { user: schema.User }
       db: Database;
     }
 

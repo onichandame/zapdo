@@ -1,8 +1,7 @@
 <script lang="ts">
-  import { User, SignOut, Lock } from "phosphor-svelte";
-  import type { PageProps } from "./$types";
+  import { User, SignOut } from "phosphor-svelte";
 
-  let { data }: PageProps = $props();
+  let { data } = $props();
 </script>
 
 <header class="mb-8">

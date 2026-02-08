@@ -1,28 +1,18 @@
 import { fail } from '@sveltejs/kit';
-import { deleteProject, updateProject, createProject, getProjectsByUserId, getProjectPath, getAllUserProjects, validatePotentialParent, } from '$lib/server/db/projects';
+import { deleteProject, updateProject, createProject, getAllUserProjects } from '$lib/server/db/projects';
 
-export const load = async ({ locals, url }) => {
+export const load = async ({ locals }) => {
   const { session, db } = locals;
-  const parentId = url.searchParams.get('parent');
 
-  const projects = await getProjectsByUserId(
+  const projects = await getAllUserProjects(
     db,
     session!.userId,
-    parentId || null
   );
 
-  const allProjects = await getAllUserProjects(db, session!.userId);
-
-  const breadcrumbPath = parentId ? await getProjectPath(db, parentId) : null;
-
-  const userKeks = session!.user.keks;
 
   return {
     projects,
-    allProjects,
-    currentParentId: parentId,
-    breadcrumbPath,
-    userKeks
+    device: locals.device!,
   };
 };
 
@@ -34,8 +24,8 @@ export const actions = {
       return fail(401, { error: 'Unauthorized' });
     }
 
-    const userKeks = session.user.keks;
-    if (!userKeks || userKeks.length === 0) {
+    const userKek = session.user.kekPublicKey;
+    if (!userKek) {
       return fail(400, { error: 'Master password not set up. Please complete onboarding first.' });
     }
 
@@ -44,7 +34,6 @@ export const actions = {
     const description = formData.get('description') as string | null;
     const color = formData.get('color') as string;
     const icon = formData.get('icon') as string;
-    const parentId = formData.get('parentId') as string | null;
     const encryptedDek = formData.get('encryptedDek') as string;
     const encryptionAlgorithm = formData.get('encryptionAlgorithm') as string;
 
@@ -68,21 +57,13 @@ export const actions = {
       return fail(400, { error: 'Encryption algorithm is required' });
     }
 
-    if (parentId) {
-      const result = await validatePotentialParent(db, null, parentId);
-      if (result) {
-        return fail(400, { error: result.error });
-      }
-    }
-
     try {
       const project = await createProject(db, session.userId, {
         name: name.trim(),
         description: description?.trim() || undefined,
         color,
         icon,
-        parentId: parentId || undefined
-      }, { encryptedDek, encryptionAlgorithm, userKekId: locals.session!.user.keks[0]!.id });
+      }, { encryptedDek, encryptionAlgorithm, });
 
       return { success: true, project };
     } catch (error) {
@@ -127,7 +108,6 @@ export const actions = {
     const description = formData.get('description') as string | null;
     const color = formData.get('color') as string;
     const icon = formData.get('icon') as string;
-    const parentId = formData.get('parentId') as string | null;
 
     if (!projectId) {
       return fail(400, { error: 'Project ID is required' });
@@ -145,13 +125,6 @@ export const actions = {
       return fail(400, { error: 'Project icon is required' });
     }
 
-    if (parentId) {
-      const result = await validatePotentialParent(db, projectId, parentId);
-      if (result) {
-        return fail(400, { error: result.error });
-      }
-    }
-
     try {
       const existingProject = await db.query.project.findMany({
         where: (project: any, { eq }: any) => eq(project.userId, session.userId)
@@ -167,7 +140,6 @@ export const actions = {
         description: description?.trim() || undefined,
         color,
         icon,
-        parentId: parentId || undefined
       });
 
       return { success: true, project };

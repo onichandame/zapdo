@@ -15,12 +15,16 @@
     ArrowClockwise,
   } from "phosphor-svelte";
   import { enhance } from "$app/forms";
-  import { goto, invalidateAll } from "$app/navigation";
+  import { invalidateAll } from "$app/navigation";
   import type { Attachment } from "svelte/attachments";
-  import { generateAesKey, exportAesKey, encryptWithAesGcm } from "$lib/crypto";
-  import { kekStore } from "$lib/stores/kekStore";
+  import {
+    generateAesKey,
+    encryptWithAesGcm,
+    exportKeyToBase64,
+    decryptWithAesGcm,
+  } from "$lib/crypto";
   import { dekStore } from "$lib/stores/dekStore";
-  import { decryptDataWithDek } from "$lib/utils/decryptData";
+  import { kekStore } from "$lib/stores/kekStore.js";
 
   let { data, form } = $props();
 
@@ -40,7 +44,7 @@
   let editProjectDescription = $state("");
   let editProjectColor = $state("#3b82f6");
   let editProjectIcon = $state("folder");
-  let editProjectParentId = $state<string | null>(null);
+
   let editFormError = $state("");
 
   let isCreating = $state(false);
@@ -48,7 +52,7 @@
   let createProjectDescription = $state("");
   let createProjectColor = $state("#3b82f6");
   let createProjectIcon = $state("folder");
-  let createProjectParentId = $state<string | null>(null);
+
   let createFormError = $state("");
 
   let isRefreshing = $state(false);
@@ -126,14 +130,12 @@
     description: string,
     color: string,
     icon: string,
-    parentId: string | null = null,
   ) {
     editProjectId = projectId;
     editProjectName = name;
     editProjectDescription = description || "";
     editProjectColor = color;
     editProjectIcon = icon;
-    editProjectParentId = parentId;
     isEditing = true;
   }
 
@@ -143,13 +145,12 @@
     isEditing = false;
   }
 
-  function showCreateDialog(parentId: string | null = null) {
+  function showCreateDialog() {
     isCreating = true;
     createProjectName = "";
     createProjectDescription = "";
     createProjectColor = "#3b82f6";
     createProjectIcon = "folder";
-    createProjectParentId = parentId;
     createFormError = "";
   }
 
@@ -238,32 +239,15 @@
             continue;
           }
 
-          const encryptedName = JSON.parse(project.name);
-          const encryptedDescription = project.description
-            ? JSON.parse(project.description)
-            : null;
+          const decryptedName = await decryptWithAesGcm(project.name, dek);
+          const decryptedDescription = project.description
+            ? await decryptWithAesGcm(project.description, dek)
+            : ``;
 
-          const decryptedName = await decryptDataWithDek(encryptedName, dek);
-          const decryptedDescription = await decryptDataWithDek(
-            encryptedDescription,
-            dek,
-          );
-
-          const decryptedData = {
-            id: project.id,
-            name: decryptedName,
-            description: decryptedDescription,
-            color: project.color,
-            icon: project.icon,
-            parentId: project.parentId,
-            hasSubprojects: project.hasSubprojects,
-            subprojectsCount: project.subprojectsCount,
-          };
-          // Create a copy of the original project with decrypted data
           const decryptedProject = {
             ...project,
-            name: decryptedData.name,
-            description: decryptedData.description,
+            name: decryptedName,
+            description: decryptedDescription,
           };
           newDecryptedProjects.push(decryptedProject);
         } catch (error) {
@@ -287,35 +271,6 @@
     decryptProjects().catch(console.error);
   });
 
-  // Navigate to subprojects view
-  async function navigateToSubprojects(projectId: string) {
-    const url = new URL(window.location.href);
-    url.searchParams.set("parent", projectId);
-    await goto(url.toString(), { invalidateAll: true });
-  }
-
-  // Navigate back to parent or root
-  async function navigateToParent() {
-    const url = new URL(window.location.href);
-    url.searchParams.delete("parent");
-    await goto(url.toString(), { invalidateAll: true });
-  }
-
-  function getBreadcrumbTitle(): string {
-    const pathNames = ["Projects"];
-
-    // Build the breadcrumb path from root to current parent
-    if (data.breadcrumbPath)
-      pathNames.push(
-        ...data.breadcrumbPath?.map((project: { id: string; name: string }) => {
-          // Find the decrypted version of this project
-          const decrypted = decryptedProjects.find((p) => p.id === project.id);
-          return decrypted ? decrypted.name : project.name;
-        }),
-      );
-    return pathNames.join(" > ");
-  }
-
   // Encrypt project data and submit
   async function handleCreateProjectSubmit(e: SubmitEvent) {
     e.preventDefault();
@@ -324,12 +279,9 @@
     const formData = new FormData(form);
 
     try {
-      // Get cached KEK from store
-      const kek = $kekStore;
-
       // Generate a new DEK for this project
       const dek = await generateAesKey();
-      const exportedDek = await exportAesKey(dek);
+      const exportedDek = await exportKeyToBase64(dek);
 
       // Encrypt project name and description with DEK
       const name = formData.get("name") as string;
@@ -341,13 +293,12 @@
         : null;
 
       // Encrypt the DEK with the cached KEK
-      const encryptedDekComponents = await encryptWithAesGcm(exportedDek, kek!);
-      const encryptedDek = JSON.stringify(encryptedDekComponents);
+      const encryptedDek = await encryptWithAesGcm(exportedDek, $kekStore!);
 
       // Update form data with encrypted values
-      formData.set("name", JSON.stringify(encryptedName));
+      formData.set("name", encryptedName);
       if (encryptedDescription) {
-        formData.set("description", JSON.stringify(encryptedDescription));
+        formData.set("description", encryptedDescription);
       } else {
         formData.set("description", "");
       }
@@ -393,17 +344,7 @@
 </script>
 
 <header class="mb-8">
-  <h1 class="text-3xl font-bold text-foreground mb-2">
-    {getBreadcrumbTitle()}
-  </h1>
-  {#if data?.currentParentId}
-    <button
-      class="text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1 cursor-pointer"
-      onclick={navigateToParent}
-    >
-      ← Back to Projects
-    </button>
-  {/if}
+  <h1 class="text-3xl font-bold text-foreground mb-2">Projects</h1>
 </header>
 
 {#if isDecrypting}
@@ -421,16 +362,10 @@
       <div class="text-muted-foreground mb-4">No projects yet</div>
       <button
         class="flex items-center gap-3 px-6 py-3 bg-primary text-primary-foreground rounded-lg border border-border hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer"
-        onclick={() => showCreateDialog(data?.currentParentId || null)}
+        onclick={() => showCreateDialog()}
       >
         <Plus size={20} />
-        <span>
-          {#if data?.currentParentId}
-            Create Subproject
-          {:else}
-            Create Your First Project
-          {/if}
-        </span>
+        <span> Create Your First Project </span>
       </button>
     </div>
   {:else}
@@ -446,34 +381,24 @@
         role="button"
         tabindex="0"
         onclick={() => {
-          if (project.hasSubprojects) {
-            navigateToSubprojects(project.id);
-          } else {
+          showEditDialog(
+            project.id,
+            project.name,
+            project.description ?? "",
+            project.color,
+            project.icon,
+          );
+        }}
+        onkeydown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
             showEditDialog(
               project.id,
               project.name,
               project.description ?? "",
               project.color,
               project.icon,
-              project.parentId,
             );
-          }
-        }}
-        onkeydown={(e) => {
-          if (e.key === "Enter" || e.key === " ") {
-            e.preventDefault();
-            if (project.hasSubprojects) {
-              navigateToSubprojects(project.id);
-            } else {
-              showEditDialog(
-                project.id,
-                project.name,
-                project.description ?? "",
-                project.color,
-                project.icon,
-                project.parentId,
-              );
-            }
           }
         }}
       >
@@ -509,34 +434,12 @@
               {project.description}
             </p>
           {/if}
-          {#if project.subprojectsCount > 0}
-            <div class="flex items-center gap-1 mt-1">
-              <Folder size={12} class="text-muted-foreground" />
-              <span class="text-xs text-muted-foreground">
-                {project.subprojectsCount}
-                {project.subprojectsCount === 1 ? "subproject" : "subprojects"}
-              </span>
-            </div>
-          {/if}
         </div>
 
-        <div class="flex gap-2">
-          <button
-            class="edit-button flex-shrink-0 bg-none border-none cursor-pointer p-2 rounded-md transition-all hover:bg-card hover:text-card-foreground opacity-0 group-hover:opacity-100"
-            onclick={(e) => {
-              e.stopPropagation();
-              showEditDialog(
-                project.id,
-                project.name,
-                project.description ?? "",
-                project.color,
-                project.icon,
-                project.parentId,
-              );
-            }}
-            onkeydown={(e) => {
-              if (e.key === "Enter" || e.key === " ") {
-                e.preventDefault();
+          <div class="flex gap-2">
+            <button
+              class="edit-button flex-shrink-0 bg-none border-none cursor-pointer p-2 rounded-md transition-all hover:bg-card hover:text-card-foreground opacity-0 group-hover:opacity-100"
+              onclick={(e) => {
                 e.stopPropagation();
                 showEditDialog(
                   project.id,
@@ -544,32 +447,60 @@
                   project.description ?? "",
                   project.color,
                   project.icon,
-                  project.parentId,
                 );
-              }
-            }}
-            aria-label={`Edit project ${project.name}`}
-          >
-            <PencilSimple size={18} />
-          </button>
-          <button
-            class="delete-button flex-shrink-0 bg-none border-none cursor-pointer p-2 rounded-md transition-all hover:bg-[rgba(239,68,68,0.1)] hover:text-[#ef4444] opacity-0 group-hover:opacity-100"
-            onclick={(e) => {
-              e.stopPropagation();
-              showDeleteConfirmation(project.id, project.name);
-            }}
-            onkeydown={(e) => {
-              if (e.key === "Enter" || e.key === " ") {
-                e.preventDefault();
+              }}
+              onkeydown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  showEditDialog(
+                    project.id,
+                    project.name,
+                    project.description ?? "",
+                    project.color,
+                    project.icon,
+                  );
+                }
+              }}
+              aria-label={`Edit project ${project.name}`}
+            >
+              <PencilSimple size={18} />
+            </button>
+            <button
+              class="view-tasks-button flex-shrink-0 bg-none border-none cursor-pointer p-2 rounded-md transition-all hover:bg-accent hover:text-accent-foreground opacity-0 group-hover:opacity-100"
+              onclick={(e) => {
+                e.stopPropagation();
+                window.location.href = `/projects/${project.id}/tasks`;
+              }}
+              onkeydown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  window.location.href = `/projects/${project.id}/tasks`;
+                }
+              }}
+              aria-label={`View tasks for ${project.name}`}
+            >
+              <Folder size={18} />
+            </button>
+            <button
+              class="delete-button flex-shrink-0 bg-none border-none cursor-pointer p-2 rounded-md transition-all hover:bg-[rgba(239,68,68,0.1)] hover:text-[#ef4444] opacity-0 group-hover:opacity-100"
+              onclick={(e) => {
                 e.stopPropagation();
                 showDeleteConfirmation(project.id, project.name);
-              }
-            }}
-            aria-label="Delete project"
-          >
-            <Trash size={18} />
-          </button>
-        </div>
+              }}
+              onkeydown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  showDeleteConfirmation(project.id, project.name);
+                }
+              }}
+              aria-label="Delete project"
+            >
+              <Trash size={18} />
+            </button>
+          </div>
       </div>
     </div>
   {/each}
@@ -577,7 +508,7 @@
   <div class="mt-8 flex gap-3">
     <button
       class="flex items-center gap-3 px-6 py-3 bg-primary text-primary-foreground rounded-lg border border-border hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer"
-      onclick={() => showCreateDialog(data?.currentParentId || null)}
+      onclick={() => showCreateDialog()}
     >
       <Plus size={20} />
       <span>Create New Project</span>
@@ -757,31 +688,6 @@
 
           <div>
             <label
-              for="create-parent"
-              class="block text-sm font-medium text-foreground mb-1"
-            >
-              Parent Project (optional)
-            </label>
-            <select
-              id="create-parent"
-              name="parentId"
-              value={createProjectParentId || ""}
-              oninput={(e) =>
-                (createProjectParentId =
-                  (e.target as HTMLSelectElement).value || null)}
-              class="w-full px-3 py-2 bg-primary text-primary-foreground border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-            >
-              <option value="">None (Root Level)</option>
-              {#each decryptedProjects as project}
-                <option value={project.id}>
-                  {project.name}
-                </option>
-              {/each}
-            </select>
-          </div>
-
-          <div>
-            <label
               for="create-color"
               class="block text-sm font-medium text-foreground mb-1"
             >
@@ -932,33 +838,6 @@
               placeholder="Describe your project"
               >{editProjectDescription}</textarea
             >
-          </div>
-
-          <div>
-            <label
-              for="edit-parent"
-              class="block text-sm font-medium text-foreground mb-1"
-            >
-              Parent Project (optional)
-            </label>
-            <select
-              id="edit-parent"
-              name="parentId"
-              value={editProjectParentId || ""}
-              oninput={(e) =>
-                (editProjectParentId =
-                  (e.target as HTMLSelectElement).value || null)}
-              class="w-full px-3 py-2 bg-primary text-primary-foreground border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-            >
-              <option value="">None (Root Level)</option>
-              {#each decryptedProjects as project}
-                {#if project.id !== editProjectId}
-                  <option value={project.id}>
-                    {project.name}
-                  </option>
-                {/if}
-              {/each}
-            </select>
           </div>
 
           <div>

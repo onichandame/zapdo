@@ -2,22 +2,42 @@
   import favicon from "$lib/assets/favicon.svg";
   import { StarFour, UserCircle, Warehouse } from "phosphor-svelte";
   import { page } from "$app/state";
-  import { kekStore } from "$lib/stores/kekStore";
+  import { getStorageItem, STORAGE_KEYS } from "$lib/storage.js";
   import { goto } from "$app/navigation";
+  import {
+    decryptWithAesGcm,
+    deriveSharedSecret,
+    importAesKey,
+    importEcToKey,
+  } from "$lib/crypto.js";
+  import { kekStore } from "$lib/stores/kekStore.js";
+  import { dekStore } from "$lib/stores/dekStore.js";
 
-  let { children } = $props();
+  let { children, data } = $props();
 
-  $effect(() => {
-    const skipKekCheck =
-      page.url.pathname.startsWith("/unlock") ||
-      page.url.pathname.startsWith("/onboarding");
-    if (skipKekCheck) return;
-    if (!$kekStore) {
-      const redirectUrl = `/unlock?redirect=${encodeURIComponent(page.url.pathname + page.url.search)}`;
-      goto(redirectUrl);
+  (async () => {
+    const kekPrivateStr = getStorageItem(STORAGE_KEYS.KEK_PRIVATE_KEY, ``);
+    if (!kekPrivateStr) goto(`/login`);
+    const kekPrivateKey = await importEcToKey(kekPrivateStr, `private`, `ECDH`);
+    const kekPublicKey = await importEcToKey(
+      data.device.user.kekPublicKey!,
+      `public`,
+      `ECDH`,
+    );
+    const kek = await deriveSharedSecret(kekPrivateKey, kekPublicKey);
+    $kekStore = kek;
+    for (const project of data.projects) {
+      const dek = project.deks[0];
+      const decryptedDekStr = await decryptWithAesGcm(
+        dek.encryptedDek,
+        $kekStore,
+      );
+      const dekKey = await importAesKey(decryptedDekStr);
+      $dekStore[project.id] = dekKey;
     }
+  })().catch((_e) => {
+    // TODO: handle kek/dek key error
   });
-
   function isActive(path: string): boolean {
     return page.url.pathname.startsWith(path);
   }

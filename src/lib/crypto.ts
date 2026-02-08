@@ -27,9 +27,10 @@ export async function generateAesKey(): Promise<CryptoKey> {
   );
 }
 
-export async function exportAesKey(key: CryptoKey): Promise<string> {
-  const exportedKey = await crypto.subtle.exportKey('raw', key);
-  return arrayBufferToBase64(exportedKey);
+export async function exportKeyToBase64(key: CryptoKey) {
+  const keyFormat = key.algorithm.name === `AES-GCM` ? `raw` : key.type === `private` ? `pkcs8` : `spki`
+  const res = await crypto.subtle.exportKey(keyFormat, key);
+  return arrayBufferToBase64(res);
 }
 
 export async function importAesKey(keyData: string): Promise<CryptoKey> {
@@ -46,46 +47,15 @@ export async function importAesKey(keyData: string): Promise<CryptoKey> {
   );
 }
 
-export async function deriveKeyFromPassword(
-  password: string,
-  salt: string,
-  iterations: number = 100000
-): Promise<CryptoKey> {
-  const encoder = new TextEncoder();
-  const passwordBuffer = encoder.encode(password);
-  const saltBuffer = encoder.encode(salt);
-  
-  const keyMaterial = await crypto.subtle.importKey(
-    'raw',
-    passwordBuffer,
-    { name: 'PBKDF2' },
-    false,
-    ['deriveKey']
-  );
-  
-  return await crypto.subtle.deriveKey(
-    {
-      name: 'PBKDF2',
-      salt: saltBuffer,
-      iterations: iterations,
-      hash: 'SHA-256'
-    },
-    keyMaterial,
-    { name: 'AES-GCM', length: 256 },
-    false,
-    ['encrypt', 'decrypt']
-  );
-}
-
 export async function encryptWithAesGcm(
   plaintext: string,
   key: CryptoKey
-): Promise<{ encryptedData: string; iv: string }> {
+) {
   const encoder = new TextEncoder();
   const data = encoder.encode(plaintext);
-  
+
   const iv = crypto.getRandomValues(new Uint8Array(12));
-  
+
   const encrypted = await crypto.subtle.encrypt(
     {
       name: 'AES-GCM',
@@ -94,21 +64,18 @@ export async function encryptWithAesGcm(
     key,
     data
   );
-  
-  return {
-    encryptedData: arrayBufferToBase64(encrypted),
-    iv: arrayBufferToBase64(iv.buffer)
-  };
+
+  return `${arrayBufferToBase64(encrypted)};${arrayBufferToBase64(iv.buffer)}`
 }
 
 export async function decryptWithAesGcm(
-  encryptedData: string,
-  iv: string,
+  encrypted: string,
   key: CryptoKey
 ): Promise<string> {
+  const [encryptedData, iv] = encrypted.split(`;`)
   const encryptedDataBuffer = base64ToArrayBuffer(encryptedData);
   const ivBuffer = base64ToArrayBuffer(iv);
-  
+
   const decrypted = await crypto.subtle.decrypt(
     {
       name: 'AES-GCM',
@@ -117,49 +84,9 @@ export async function decryptWithAesGcm(
     key,
     encryptedDataBuffer
   );
-  
+
   const decoder = new TextDecoder();
   return decoder.decode(decrypted);
-}
-
-export async function encryptWithKek(
-  data: ArrayBuffer,
-  kek: CryptoKey
-) {
-  const iv = crypto.getRandomValues(new Uint8Array(12));
-  const encryptedData = await crypto.subtle.encrypt(
-    {
-      name: 'AES-GCM',
-      iv
-    },
-    kek,
-    data
-  );
-
-  return {
-    encryptedData: arrayBufferToBase64(encryptedData),
-    iv: arrayBufferToBase64(iv.buffer)
-  };
-}
-
-export async function decryptWithKek(
-  encryptedDataBase64: string,
-  ivBase64: string,
-  kek: CryptoKey
-) {
-  const encryptedDataBuffer = base64ToArrayBuffer(encryptedDataBase64);
-  const ivBuffer = base64ToArrayBuffer(ivBase64);
-  
-  const decryptedData = await crypto.subtle.decrypt(
-    {
-      name: 'AES-GCM',
-      iv: ivBuffer
-    },
-    kek,
-    encryptedDataBuffer
-  );
-
-  return decryptedData;
 }
 
 export async function generateEcP256KeyPair() {
@@ -178,28 +105,23 @@ export async function generateEcP256KeyPair() {
   };
 }
 
-export async function exportEcKeyToJwk(key: CryptoKey) {
-  const jwk = await crypto.subtle.exportKey('jwk', key);
-  return jwk;
-}
-
-export async function importEcJwkToKey(jwk: JsonWebKey, keyType: 'public' | 'private') {
+export async function importEcToKey(ec: string, keyType: 'public' | 'private', algo: `ECDH` | `ECDSA`) {
   const key = await crypto.subtle.importKey(
-    'jwk',
-    jwk,
+    keyType === `private` ? `pkcs8` : `spki`,
+    base64ToArrayBuffer(ec),
     {
-      name: 'ECDH',
+      name: algo,
       namedCurve: 'P-256'
     },
     true,
     keyType === 'public' ? [] : ['deriveKey', 'deriveBits']
   );
-  
+
   return key;
 }
 
 export async function deriveSharedSecret(privateKey: CryptoKey, publicKey: CryptoKey) {
-  const sharedSecret = await crypto.subtle.deriveBits(
+  const sharedBits = await crypto.subtle.deriveBits(
     {
       name: 'ECDH',
       public: publicKey
@@ -207,7 +129,8 @@ export async function deriveSharedSecret(privateKey: CryptoKey, publicKey: Crypt
     privateKey,
     256
   );
-  return sharedSecret;
+  const aesKey = await crypto.subtle.importKey(`raw`, sharedBits, { name: `AES-GCM` }, false, ['encrypt', 'decrypt'])
+  return aesKey;
 }
 
 export async function generateEcdsaP256KeyPair() {
@@ -235,13 +158,15 @@ export async function signWithEcdsa(privateKey: CryptoKey, data: ArrayBuffer): P
     privateKey,
     data
   );
-  
+
   return arrayBufferToBase64(signature);
 }
 
-export async function verifyEcdsaSignature(publicKey: CryptoKey, signature: string, data: ArrayBuffer): Promise<boolean> {
+export async function verifyEcdsaSignature(publicKey: CryptoKey, signature: string, data: ArrayBuffer | string): Promise<boolean> {
   const signatureBuffer = base64ToArrayBuffer(signature);
-  
+
+  const normalizedData = typeof data === `string` ? base64ToArrayBuffer(data) : data
+
   const isValid = await crypto.subtle.verify(
     {
       name: 'ECDSA',
@@ -249,8 +174,8 @@ export async function verifyEcdsaSignature(publicKey: CryptoKey, signature: stri
     },
     publicKey,
     signatureBuffer,
-    data
+    normalizedData
   );
-  
+
   return isValid;
 }

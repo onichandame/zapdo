@@ -58,7 +58,6 @@ export const project = sqliteTable(
     userId: text('user_id')
       .notNull()
       .references(() => user.id, { onDelete: 'cascade' }),
-    parentId: text('parent_id').references((): AnySQLiteColumn => project.id),
     name: text('name').notNull(),
     description: text('description'),
     color: text('color').notNull(),
@@ -68,7 +67,6 @@ export const project = sqliteTable(
   },
   (table) => [
     index('project_user_id_idx').on(table.userId),
-    index('project_parent_id_idx').on(table.parentId)
   ]
 );
 
@@ -178,14 +176,6 @@ export const projectRelations = relations(project, ({ one, many }) => ({
   user: one(user, {
     fields: [project.userId],
     references: [user.id]
-  }),
-  parent: one(project, {
-    fields: [project.parentId],
-    references: [project.id]
-    , relationName: 'subprojects'
-  }),
-  subprojects: many(project, {
-    relationName: 'subprojects'
   }),
   deks: many(userProjectDek, { relationName: 'projectDeks' })
 }));
