@@ -1,19 +1,8 @@
 import { fail } from '@sveltejs/kit';
 import { deleteProject, updateProject, createProject, getAllUserProjects } from '$lib/server/db/projects';
 
-export const load = async ({ locals }) => {
-  const { session, db } = locals;
-
-  const projects = await getAllUserProjects(
-    db,
-    session!.userId,
-  );
-
-
-  return {
-    projects,
-    device: locals.device!,
-  };
+export const load = async ({ }) => {
+  return {};
 };
 
 export const actions = {

@@ -1,207 +1,9 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "4a681645-f210-4dba-98ec-9adf3b1ad5d7",
+  "id": "feca1b41-8e3f-4300-85e3-beb83465bb9d",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
-    "device_requests": {
-      "name": "device_requests",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "user_id": {
-          "name": "user_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "requesting_device_name": {
-          "name": "requesting_device_name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "requesting_device_type": {
-          "name": "requesting_device_type",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "requesting_device_temp_public_key": {
-          "name": "requesting_device_temp_public_key",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "status": {
-          "name": "status",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": "'pending'"
-        },
-        "encrypted_kek_private_key": {
-          "name": "encrypted_kek_private_key",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "expires_at": {
-          "name": "expires_at",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        }
-      },
-      "indexes": {
-        "device_requests_user_id_idx": {
-          "name": "device_requests_user_id_idx",
-          "columns": [
-            "user_id"
-          ],
-          "isUnique": false
-        },
-        "device_requests_status_idx": {
-          "name": "device_requests_status_idx",
-          "columns": [
-            "status"
-          ],
-          "isUnique": false
-        },
-        "device_requests_expires_at_idx": {
-          "name": "device_requests_expires_at_idx",
-          "columns": [
-            "expires_at"
-          ],
-          "isUnique": false
-        }
-      },
-      "foreignKeys": {
-        "device_requests_user_id_user_id_fk": {
-          "name": "device_requests_user_id_user_id_fk",
-          "tableFrom": "device_requests",
-          "tableTo": "user",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "checkConstraints": {}
-    },
-    "devices": {
-      "name": "devices",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "user_id": {
-          "name": "user_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "name": {
-          "name": "name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "type": {
-          "name": "type",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "public_key": {
-          "name": "public_key",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        }
-      },
-      "indexes": {
-        "devices_user_id_idx": {
-          "name": "devices_user_id_idx",
-          "columns": [
-            "user_id"
-          ],
-          "isUnique": false
-        }
-      },
-      "foreignKeys": {
-        "devices_user_id_user_id_fk": {
-          "name": "devices_user_id_user_id_fk",
-          "tableFrom": "devices",
-          "tableTo": "user",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "checkConstraints": {}
-    },
     "oauth_account": {
       "name": "oauth_account",
       "columns": {
@@ -329,13 +131,6 @@
           "notNull": true,
           "autoincrement": false
         },
-        "parent_id": {
-          "name": "parent_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
         "name": {
           "name": "name",
           "type": "text",
@@ -386,13 +181,6 @@
             "user_id"
           ],
           "isUnique": false
-        },
-        "project_parent_id_idx": {
-          "name": "project_parent_id_idx",
-          "columns": [
-            "parent_id"
-          ],
-          "isUnique": false
         }
       },
       "foreignKeys": {
@@ -407,19 +195,6 @@
             "id"
           ],
           "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "project_parent_id_project_id_fk": {
-          "name": "project_parent_id_project_id_fk",
-          "tableFrom": "project",
-          "tableTo": "project",
-          "columnsFrom": [
-            "parent_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
           "onUpdate": "no action"
         }
       },
@@ -442,6 +217,20 @@
           "type": "text",
           "primaryKey": false,
           "notNull": true,
+          "autoincrement": false
+        },
+        "device_name": {
+          "name": "device_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "device_public_key": {
+          "name": "device_public_key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
           "autoincrement": false
         },
         "expires_at": {
@@ -561,135 +350,6 @@
       "uniqueConstraints": {},
       "checkConstraints": {}
     },
-    "user_kek": {
-      "name": "user_kek",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "user_id": {
-          "name": "user_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "key_derivation_salt": {
-          "name": "key_derivation_salt",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "key_derivation_iterations": {
-          "name": "key_derivation_iterations",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": 100000
-        },
-        "key_derivation_algorithm": {
-          "name": "key_derivation_algorithm",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": "'PBKDF2-SHA256'"
-        },
-        "public_key": {
-          "name": "public_key",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "encrypted_private_key": {
-          "name": "encrypted_private_key",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "asymmetric_algorithm": {
-          "name": "asymmetric_algorithm",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": "'RSA-OAEP'"
-        },
-        "key_format": {
-          "name": "key_format",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": "'JWK'"
-        },
-        "key_version": {
-          "name": "key_version",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": 1
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        }
-      },
-      "indexes": {
-        "user_kek_user_id_key_version_idx": {
-          "name": "user_kek_user_id_key_version_idx",
-          "columns": [
-            "user_id",
-            "key_version"
-          ],
-          "isUnique": true
-        },
-        "user_kek_user_id_idx": {
-          "name": "user_kek_user_id_idx",
-          "columns": [
-            "user_id"
-          ],
-          "isUnique": false
-        }
-      },
-      "foreignKeys": {
-        "user_kek_user_id_user_id_fk": {
-          "name": "user_kek_user_id_user_id_fk",
-          "tableFrom": "user_kek",
-          "tableTo": "user",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "checkConstraints": {}
-    },
     "user_project_dek": {
       "name": "user_project_dek",
       "columns": {
@@ -709,13 +369,6 @@
         },
         "project_id": {
           "name": "project_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "user_kek_id": {
-          "name": "user_kek_id",
           "type": "text",
           "primaryKey": false,
           "notNull": true,
@@ -808,19 +461,6 @@
             "id"
           ],
           "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "user_project_dek_user_kek_id_user_kek_id_fk": {
-          "name": "user_project_dek_user_kek_id_user_kek_id_fk",
-          "tableFrom": "user_project_dek",
-          "tableTo": "user_kek",
-          "columnsFrom": [
-            "user_kek_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "set null",
           "onUpdate": "no action"
         }
       },

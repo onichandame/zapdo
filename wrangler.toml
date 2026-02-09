@@ -45,7 +45,7 @@ custom_domain = true
 [[env.development.d1_databases]]
 binding = "DB"
 database_name = "zapdo-db-dev"
-database_id = "c8fc7281-7ca2-4a2c-9e21-7e6e67797458"
+database_id = "cd000fb7-5924-4205-b1a0-1cc427fbb47b"
 migrations_dir = ".drizzle"
 
 #[[env.development.r2_buckets]]

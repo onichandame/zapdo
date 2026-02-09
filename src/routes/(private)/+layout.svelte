@@ -1,6 +1,6 @@
 <script lang="ts">
   import favicon from "$lib/assets/favicon.svg";
-  import { StarFour, UserCircle, Warehouse } from "phosphor-svelte";
+  import { UserCircle, Warehouse } from "phosphor-svelte";
   import { page } from "$app/state";
   import { getStorageItem, STORAGE_KEYS } from "$lib/storage";
   import { goto } from "$app/navigation";
@@ -12,7 +12,6 @@
   } from "$lib/crypto";
   import { kekStore } from "$lib/stores/kekStore";
   import { dekStore } from "$lib/stores/dekStore";
-  import { deviceKeyStore } from "$lib/stores/deviceKeyStore";
 
   let { children, data } = $props();
 
@@ -21,7 +20,7 @@
     if (!kekPrivateStr) goto(`/login`);
     const kekPrivateKey = await importEcToKey(kekPrivateStr, `private`, `ECDH`);
     const kekPublicKey = await importEcToKey(
-      data.device.user.kekPublicKey!,
+      data.session.user.kekPublicKey!,
       `public`,
       `ECDH`,
     );
@@ -36,21 +35,9 @@
       const dekKey = await importAesKey(decryptedDekStr);
       $dekStore[project.id] = dekKey;
     }
-    const deviceId = getStorageItem(STORAGE_KEYS.DEVICE_ID, ``);
-    if (!deviceId) goto(`/login`);
-    const devicePrivateStr = getStorageItem(
-      STORAGE_KEYS.DEVICE_AUTH_PRIVATE_KEY,
-      ``,
-    );
-    if (!devicePrivateStr) goto(`/login`);
-    const devicePrivateKey = await importEcToKey(
-      devicePrivateStr,
-      `private`,
-      `ECDSA`,
-    );
-    $deviceKeyStore = { deviceId, privateKey: devicePrivateKey };
-  })().catch((_e) => {
-    // TODO: handle kek/dek key error
+  })().catch((e) => {
+    console.error(e);
+    // TODO: handle error display
   });
   function isActive(path: string): boolean {
     return page.url.pathname.startsWith(path);
@@ -82,17 +69,6 @@
       </svg>
     </div>
     <nav class="flex-1 flex flex-col items-center space-y-4">
-      <a
-        href="/tasks"
-        title="Tasks"
-        class="p-2 rounded-lg hover:bg-accent hover:text-accent-foreground transition-colors {isActive(
-          '/tasks',
-        )
-          ? 'bg-accent text-accent-foreground'
-          : ''}"
-      >
-        <StarFour size={24} />
-      </a>
       <a
         href="/projects"
         title="Projects"

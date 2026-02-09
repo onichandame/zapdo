@@ -1,22 +1,20 @@
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import * as schema from '$lib/server/db/schema';
 import type { Database } from '$lib/server/db';
-import { error } from '@sveltejs/kit';
-import { importEcToKey, verifyEcdsaSignature } from '$lib/crypto';
 
-export const TEMP_SESSION_COOKIE_NAME = 'temp_session';
-const TEMP_SESSION_EXPIRY_MINUTES = 15;
+export enum SESSION_COOKIE_NAME {
+  PERM_SESSION = `zapdo_session`
+}
+const PERM_SESSION_EXPIRY_MINUTES = 60 * 24 * 7;
 
-export async function createTemporarySession(
+export async function createSession(
   db: Database,
   userId: string
 ) {
-  const tempSessionId = crypto.randomUUID();
   const expiresAt = new Date();
-  expiresAt.setMinutes(expiresAt.getMinutes() + TEMP_SESSION_EXPIRY_MINUTES);
+  expiresAt.setMinutes(expiresAt.getMinutes() + PERM_SESSION_EXPIRY_MINUTES);
 
   const [session] = await db.insert(schema.session).values({
-    id: tempSessionId,
     userId,
     expiresAt: expiresAt.toISOString()
   }).returning();
@@ -24,44 +22,42 @@ export async function createTemporarySession(
   return session;
 }
 
-export async function validateTemporarySession(
+export async function validateSession(
   db: Database,
-  tempSessionId: string
+  sessionId: string
 ) {
-  const tempSession = await db.query.session.findFirst({
-    where: (session, { eq }) => eq(session.id, tempSessionId)
-    , with: { user: { with: { oauthAccounts: true } } }
+  const session = await db.query.session.findFirst({
+    where: (session, { eq }) => eq(session.id, sessionId)
+    , with: { user: { with: { oauthAccounts: true } }, }
   });
 
-  if (!tempSession) {
+  if (!session) {
     return null;
   }
 
-  if (new Date(tempSession.expiresAt) < new Date()) {
+  if (new Date(session.expiresAt) < new Date()) {
     await db.delete(schema.session)
-      .where(eq(schema.session.id, tempSessionId));
+      .where(eq(schema.session.id, sessionId));
     return null;
   }
 
-  return tempSession;
+  const newSession = await tryExtendPermanentSession(db, session)
+  if (newSession) return await db.query.session.findFirst({
+    where: (session, { eq }) => eq(session.id, session.id)
+    , with: { user: { with: { oauthAccounts: true } }, }
+  });
+  return session
 }
 
-export async function consumeTemporarySession(
-  db: Database,
-  tempSessionId: string
-): Promise<void> {
-  await db.delete(schema.session)
-    .where(eq(schema.session.id, tempSessionId));
+async function tryExtendPermanentSession(db: Database, session: schema.Session) {
+  if (new Date(session.expiresAt).getTime() - Date.now() < PERM_SESSION_EXPIRY_MINUTES / 2 * 60 * 1000) {
+    return extendPermanentSession(db, session.id)
+  }
 }
 
-export async function parseDeviceToken(db: Database, token: string) {
-  const [deviceId, authToken, signature] = token.split(`;`)
-  const device = await db.query.devices.findFirst({ where: (device, { eq }) => eq(device.id, deviceId), with: { user: true } })
-  if (!device) throw error(400, `device not found`)
-  const devicePubKey = await importEcToKey(device.publicKey, `public`, `ECDSA`)
-  const signatureValid = await verifyEcdsaSignature(devicePubKey, signature, authToken)
-  if (!signatureValid) throw error(401, `signature broken`)
-  const timestamp = new Date(btoa(authToken))
-  if (Math.abs(timestamp.getTime() - Date.now()) < 1000 * 60 * 5) throw error(401, `auth token expired`)
-  return device
+async function extendPermanentSession(db: Database, sessionId: string) {
+  const expiresAt = new Date();
+  expiresAt.setMinutes(expiresAt.getMinutes() + PERM_SESSION_EXPIRY_MINUTES);
+  const [session] = await db.update(schema.session).set({ expiresAt: expiresAt.toISOString() }).where(and(eq(schema.session.id, sessionId))).returning()
+  return session
 }

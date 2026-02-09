@@ -1,6 +1,6 @@
 import { redirect, type RequestHandler } from '@sveltejs/kit';
 import { CloudflareGoogleOAuth } from '$lib/server/auth/oauth/google';
-import { createTemporarySession, TEMP_SESSION_COOKIE_NAME } from '$lib/auth/session';
+import { createSession, SESSION_COOKIE_NAME, } from '$lib/auth/session';
 
 export const GET: RequestHandler = async ({ platform, url, cookies, locals }) => {
   const code = url.searchParams.get('code');
@@ -39,8 +39,8 @@ export const GET: RequestHandler = async ({ platform, url, cookies, locals }) =>
     scope: tokens.scope
   });
 
-  const session = await createTemporarySession(locals.db, user.id);
-  cookies.set(TEMP_SESSION_COOKIE_NAME, session.id, {
+  const session = await createSession(locals.db, user.id);
+  cookies.set(SESSION_COOKIE_NAME.PERM_SESSION, session.id, {
     path: '/',
     httpOnly: true,
     secure: url.protocol === 'https:',

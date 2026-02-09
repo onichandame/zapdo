@@ -42,6 +42,8 @@ export const session = sqliteTable(
     userId: text('user_id')
       .notNull()
       .references(() => user.id, { onDelete: 'cascade' }),
+    deviceName: text(`device_name`),
+    devicePublicKey: text(`device_public_key`),
     expiresAt: text('expires_at').notNull(),
     createdAt: text('created_at').notNull().$defaultFn(() => new Date().toISOString())
   },
@@ -77,8 +79,6 @@ export const userRelations = relations(user, ({ many }) => ({
     relationName: 'userProjects'
   }),
   deks: many(userProjectDek, { relationName: 'userDeks' }),
-  devices: many(devices),
-  deviceRequests: many(deviceRequests)
 }));
 
 export const oauthAccountRelations = relations(oauthAccount, ({ one }) => ({
@@ -92,7 +92,7 @@ export const sessionRelations = relations(session, ({ one }) => ({
   user: one(user, {
     fields: [session.userId],
     references: [user.id]
-  })
+  }),
 }));
 
 export const userProjectDek = sqliteTable(
@@ -131,67 +131,12 @@ export const userProjectDekRelations = relations(userProjectDek, ({ one }) => ({
   })
 }));
 
-export const devices = sqliteTable(
-  'devices',
-  {
-    id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
-    userId: text('user_id')
-      .notNull()
-      .references(() => user.id, { onDelete: 'cascade' }),
-    name: text('name').notNull(),
-    type: text('type').notNull(),
-    publicKey: text('public_key').notNull(),
-    createdAt: text('created_at').notNull().$defaultFn(() => new Date().toISOString()),
-    updatedAt: text('updated_at').notNull().$defaultFn(() => new Date().toISOString())
-  },
-  (table) => [
-    index('devices_user_id_idx').on(table.userId)
-  ]
-);
-
-export const deviceRequests = sqliteTable(
-  'device_requests',
-  {
-    id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
-    userId: text('user_id')
-      .notNull()
-      .references(() => user.id, { onDelete: 'cascade' }),
-    requestingDeviceName: text('requesting_device_name').notNull(),
-    requestingDeviceType: text('requesting_device_type').notNull(),
-    requestingDeviceTempPublicKey: text('requesting_device_temp_public_key').notNull(),
-    status: text('status', { enum: ['pending', 'approved', 'rejected', 'expired'] }).notNull().default('pending'),
-    encryptedKekPrivateKey: text('encrypted_kek_private_key'),
-    expiresAt: text('expires_at').notNull(),
-    createdAt: text('created_at').notNull().$defaultFn(() => new Date().toISOString()),
-    updatedAt: text('updated_at').notNull().$defaultFn(() => new Date().toISOString())
-  },
-  (table) => [
-    index('device_requests_user_id_idx').on(table.userId),
-    index('device_requests_status_idx').on(table.status),
-    index('device_requests_expires_at_idx').on(table.expiresAt)
-  ]
-);
-
 export const projectRelations = relations(project, ({ one, many }) => ({
   user: one(user, {
     fields: [project.userId],
     references: [user.id]
   }),
   deks: many(userProjectDek, { relationName: 'projectDeks' })
-}));
-
-export const devicesRelations = relations(devices, ({ one }) => ({
-  user: one(user, {
-    fields: [devices.userId],
-    references: [user.id]
-  })
-}));
-
-export const deviceRequestsRelations = relations(deviceRequests, ({ one }) => ({
-  user: one(user, {
-    fields: [deviceRequests.userId],
-    references: [user.id]
-  })
 }));
 
 export type User = typeof user.$inferSelect;
@@ -202,7 +147,3 @@ export type Project = typeof project.$inferSelect;
 export type NewProject = typeof project.$inferInsert;
 export type UserProjectDek = typeof userProjectDek.$inferSelect;
 export type NewUserProjectDek = typeof userProjectDek.$inferInsert;
-export type Device = typeof devices.$inferSelect;
-export type NewDevice = typeof devices.$inferInsert;
-export type DeviceRequest = typeof deviceRequests.$inferSelect;
-export type NewDeviceRequest = typeof deviceRequests.$inferInsert;

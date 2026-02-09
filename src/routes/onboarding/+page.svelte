@@ -26,13 +26,6 @@
   );
   let errorMessage = $state("");
 
-  // Initialize based on server data - if device exists, show success immediately
-  $effect(() => {
-    if (data?.device) {
-      currentStep = "success";
-    }
-  });
-
   async function handleSubmit(e: SubmitEvent) {
     e.preventDefault();
 
@@ -41,21 +34,15 @@
     errorMessage = "";
 
     try {
-      let authPublicKey: string;
       let kekPublicKey: string;
 
       try {
-        const authKeyPair = await generateEcdsaP256KeyPair();
-        authPublicKey = await exportKeyToBase64(authKeyPair.publicKey);
-        const authPrivateKey = await exportKeyToBase64(authKeyPair.privateKey);
-        setStorageItem(STORAGE_KEYS.DEVICE_AUTH_PRIVATE_KEY, authPrivateKey);
-
         const kekKeyPair = await generateEcP256KeyPair();
         kekPublicKey = await exportKeyToBase64(kekKeyPair.publicKey);
         const kekPrivateKey = await exportKeyToBase64(kekKeyPair.privateKey);
         setStorageItem(STORAGE_KEYS.KEK_PRIVATE_KEY, kekPrivateKey);
       } catch (err) {
-        console.log(err);
+        console.error(err);
         errorMessage = "Failed to generate secure keys. Please try again.";
         currentStep = "form";
         return;
@@ -65,7 +52,6 @@
       currentStep = "registering";
 
       const formData = new FormData();
-      formData.append("authPublicKey", authPublicKey);
       formData.append("kekPublicKey", kekPublicKey);
 
       const response = await fetch("/onboarding", {
@@ -81,8 +67,6 @@
       result.type;
 
       if (result.type === `success`) {
-        setStorageItem(STORAGE_KEYS.DEVICE_ID, result.data!.deviceId);
-
         // Show success screen instead of immediate redirect
         currentStep = "success";
       }

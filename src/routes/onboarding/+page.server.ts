@@ -1,16 +1,13 @@
 import { error, redirect } from '@sveltejs/kit';
 import * as schema from '$lib/server/db/schema';
 import { eq } from 'drizzle-orm';
-import { consumeTemporarySession } from '$lib/auth/session';
 
-export const load = async ({ locals, cookies }) => {
-  if (locals.device) {
-    return { device: locals.device }
-  }
-
+export const load = async ({ locals }) => {
   if (!locals.session) {
     return {}
   }
+
+  if (locals.session.user.kekPublicKey) throw redirect(302, `/projects`)
 
   return {
     session: locals.session,
@@ -18,17 +15,18 @@ export const load = async ({ locals, cookies }) => {
 };
 
 export const actions = {
-  default: async ({ request, locals, cookies }) => {
+  default: async ({ request, locals, }) => {
     const session = locals.session;
 
     if (!session) throw error(401, `Unauthorized`)
 
+    if (session.user.kekPublicKey) throw error(400, `Duplicate Onboarding`)
+
     const formData = await request.formData();
-    const authPublicKey = formData.get('authPublicKey') as string;
     const kekPublicKey = formData.get('kekPublicKey') as string;
 
-    if (!authPublicKey || !kekPublicKey) {
-      throw error(401, 'Both authPublicKey and kekPublicKey are required')
+    if (!kekPublicKey) {
+      throw error(401, 'kekPublicKey is required')
     }
 
     await locals.db
@@ -40,22 +38,13 @@ export const actions = {
       .where(eq(schema.user.id, session.user.id));
 
     const deviceName = 'First Device';
-    const deviceType = 'browser';
 
-    const [device] = await locals.db.insert(schema.devices).values({
-      userId: session.user.id,
-      name: deviceName,
-      type: deviceType,
-      publicKey: authPublicKey,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+    const [newSession] = await locals.db.update(schema.session).set({
+      deviceName: deviceName,
     }).returning();
 
-    cookies.delete('temp_session', { path: '/' });
-    await consumeTemporarySession(locals.db, session.id);
-
     return {
-      deviceId: device.id
+      session: newSession
     };
   }
 };

@@ -1,29 +1,8 @@
 <script lang="ts">
   import { GoogleLogo, Lock } from "phosphor-svelte";
   import { onMount } from "svelte";
-  import { authorizedFetch } from "$lib/auth/authorizedFetch";
-  import { goto } from "$app/navigation";
 
   let error = $state<string | null>(null);
-
-  async function checkDeviceRegistration() {
-    try {
-      const formData = new FormData();
-      formData.append("checkDeviceRegistration", "true");
-
-      const response = await authorizedFetch(window.location.href, {
-        method: "POST",
-        body: formData,
-      });
-
-      if (response.ok) {
-        goto("/projects");
-      }
-      // If 403 or other error, continue with normal flow
-    } catch (err) {
-      // Continue with normal flow if check fails
-    }
-  }
 
   onMount(() => {
     // Check if there's an error from the callback
@@ -31,9 +10,6 @@
     const errorMessage = urlParams.get("error");
     if (errorMessage) {
       error = decodeURIComponent(errorMessage);
-    } else {
-      // Check if device is already registered
-      checkDeviceRegistration();
     }
   });
 </script>

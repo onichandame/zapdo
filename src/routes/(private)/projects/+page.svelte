@@ -23,13 +23,14 @@
     exportKeyToBase64,
     decryptWithAesGcm,
   } from "$lib/crypto";
+  import type * as schema from "$lib/server/db/schema";
   import { dekStore } from "$lib/stores/dekStore";
   import { kekStore } from "$lib/stores/kekStore.js";
 
   let { data, form } = $props();
 
   // Decrypted projects state
-  let decryptedProjects = $state<any[]>([]);
+  let decryptedProjects = $state<schema.Project[]>([]);
   let decryptionErrors = $state<Record<string, string>>({});
   let isDecrypting = $state(true);
 
@@ -221,7 +222,7 @@
     // Create a function to handle async decryption
     const decryptProjects = async () => {
       const deks = $dekStore;
-      const newDecryptedProjects: (typeof data.projects)[number][] = [];
+      const newDecryptedProjects: typeof data.projects = [];
       const newDecryptionErrors: Record<string, string> = {};
 
       for (const project of data!.projects) {
@@ -436,10 +437,22 @@
           {/if}
         </div>
 
-          <div class="flex gap-2">
-            <button
-              class="edit-button flex-shrink-0 bg-none border-none cursor-pointer p-2 rounded-md transition-all hover:bg-card hover:text-card-foreground opacity-0 group-hover:opacity-100"
-              onclick={(e) => {
+        <div class="flex gap-2">
+          <button
+            class="edit-button flex-shrink-0 bg-none border-none cursor-pointer p-2 rounded-md transition-all hover:bg-card hover:text-card-foreground opacity-0 group-hover:opacity-100"
+            onclick={(e) => {
+              e.stopPropagation();
+              showEditDialog(
+                project.id,
+                project.name,
+                project.description ?? "",
+                project.color,
+                project.icon,
+              );
+            }}
+            onkeydown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
                 e.stopPropagation();
                 showEditDialog(
                   project.id,
@@ -448,59 +461,47 @@
                   project.color,
                   project.icon,
                 );
-              }}
-              onkeydown={(e) => {
-                if (e.key === "Enter" || e.key === " ") {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  showEditDialog(
-                    project.id,
-                    project.name,
-                    project.description ?? "",
-                    project.color,
-                    project.icon,
-                  );
-                }
-              }}
-              aria-label={`Edit project ${project.name}`}
-            >
-              <PencilSimple size={18} />
-            </button>
-            <button
-              class="view-tasks-button flex-shrink-0 bg-none border-none cursor-pointer p-2 rounded-md transition-all hover:bg-accent hover:text-accent-foreground opacity-0 group-hover:opacity-100"
-              onclick={(e) => {
+              }
+            }}
+            aria-label={`Edit project ${project.name}`}
+          >
+            <PencilSimple size={18} />
+          </button>
+          <button
+            class="view-tasks-button flex-shrink-0 bg-none border-none cursor-pointer p-2 rounded-md transition-all hover:bg-accent hover:text-accent-foreground opacity-0 group-hover:opacity-100"
+            onclick={(e) => {
+              e.stopPropagation();
+              window.location.href = `/projects/${project.id}/tasks`;
+            }}
+            onkeydown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
                 e.stopPropagation();
                 window.location.href = `/projects/${project.id}/tasks`;
-              }}
-              onkeydown={(e) => {
-                if (e.key === "Enter" || e.key === " ") {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  window.location.href = `/projects/${project.id}/tasks`;
-                }
-              }}
-              aria-label={`View tasks for ${project.name}`}
-            >
-              <Folder size={18} />
-            </button>
-            <button
-              class="delete-button flex-shrink-0 bg-none border-none cursor-pointer p-2 rounded-md transition-all hover:bg-[rgba(239,68,68,0.1)] hover:text-[#ef4444] opacity-0 group-hover:opacity-100"
-              onclick={(e) => {
+              }
+            }}
+            aria-label={`View tasks for ${project.name}`}
+          >
+            <Folder size={18} />
+          </button>
+          <button
+            class="delete-button flex-shrink-0 bg-none border-none cursor-pointer p-2 rounded-md transition-all hover:bg-[rgba(239,68,68,0.1)] hover:text-[#ef4444] opacity-0 group-hover:opacity-100"
+            onclick={(e) => {
+              e.stopPropagation();
+              showDeleteConfirmation(project.id, project.name);
+            }}
+            onkeydown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
                 e.stopPropagation();
                 showDeleteConfirmation(project.id, project.name);
-              }}
-              onkeydown={(e) => {
-                if (e.key === "Enter" || e.key === " ") {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  showDeleteConfirmation(project.id, project.name);
-                }
-              }}
-              aria-label="Delete project"
-            >
-              <Trash size={18} />
-            </button>
-          </div>
+              }
+            }}
+            aria-label="Delete project"
+          >
+            <Trash size={18} />
+          </button>
+        </div>
       </div>
     </div>
   {/each}

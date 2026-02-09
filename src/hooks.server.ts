@@ -2,7 +2,7 @@ import { error, type Handle } from '@sveltejs/kit';
 import { sequence } from '@sveltejs/kit/hooks';
 import { drizzle } from 'drizzle-orm/d1';
 import * as schema from '$lib/server/db/schema';
-import { parseDeviceToken, TEMP_SESSION_COOKIE_NAME, validateTemporarySession } from '$lib/auth/session';
+import { SESSION_COOKIE_NAME, validateSession } from '$lib/auth/session';
 
 const initDatabase: Handle = async ({ event, resolve }) => {
   const db = drizzle(event.platform!.env.DB, { schema });
@@ -11,15 +11,13 @@ const initDatabase: Handle = async ({ event, resolve }) => {
 };
 
 const initSession: Handle = async ({ event, resolve }) => {
-  const sessionId = event.cookies.get(TEMP_SESSION_COOKIE_NAME)
-  const deviceToken = event.request.headers.get(`authorization`)?.split(`Device `)?.[1]
-  if (deviceToken) {
-    const device = await parseDeviceToken(event.locals.db, deviceToken)
-    event.locals.device = device
-  } else if (sessionId) {
-    const session = await validateTemporarySession(event.locals.db, sessionId)
-    if (!session) throw error(401, `session invalid`)
-    event.locals.session = session
+  const sessionId = event.cookies.get(SESSION_COOKIE_NAME.PERM_SESSION)
+  if (sessionId) {
+    const session = await validateSession(event.locals.db, sessionId)
+    if (!session) {
+      event.cookies.delete(SESSION_COOKIE_NAME.PERM_SESSION, { path: `/` })
+    } else
+      event.locals.session = session
   }
 
   return resolve(event);
