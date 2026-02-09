@@ -14,7 +14,7 @@
     PencilSimple,
     ArrowClockwise,
   } from "phosphor-svelte";
-  import { enhance } from "$app/forms";
+  import { deserialize, enhance } from "$app/forms";
   import { invalidateAll } from "$app/navigation";
   import type { Attachment } from "svelte/attachments";
   import {
@@ -26,8 +26,10 @@
   import type * as schema from "$lib/server/db/schema";
   import { dekStore } from "$lib/stores/dekStore";
   import { kekStore } from "$lib/stores/kekStore.js";
+  import type { ActionResult } from "@sveltejs/kit";
+  import type { ActionData } from "./$types.js";
 
-  let { data, form } = $props();
+  let { data } = $props();
 
   // Decrypted projects state
   let decryptedProjects = $state<schema.Project[]>([]);
@@ -100,19 +102,6 @@
       document.removeEventListener("click", handleClick, true);
     };
   };
-
-  $effect(() => {
-    if (form?.error) {
-      if (isCreating) {
-        createFormError = form.error;
-      } else if (isEditing) {
-        editFormError = form.error;
-      } else {
-        // Handle delete errors
-        deleteFormError = form.error;
-      }
-    }
-  });
 
   function showDeleteConfirmation(projectId: string, projectName: string) {
     deleteProjectId = projectId;
@@ -295,6 +284,7 @@
 
       // Encrypt the DEK with the cached KEK
       const encryptedDek = await encryptWithAesGcm(exportedDek, $kekStore!);
+      console.log(encryptedDek);
 
       // Update form data with encrypted values
       formData.set("name", encryptedName);
@@ -315,22 +305,21 @@
         },
       })
         .then(async (response) => {
-          const result = (await response.json()) as {
-            success?: boolean;
-            error?: string;
-            project?: any;
-          };
-          if (result.success && result.project) {
+          const result = deserialize(await response.json()) as ActionResult<
+            NonNullable<ActionData>
+          >;
+          if (result.type === `success`) {
             // Add the new DEK to the store for immediate decryption
             const deks = $dekStore;
-            deks[result.project.id] = dek;
+            deks[result.data!.project!.id] = dek;
             $dekStore = { ...deks };
 
             isCreating = false;
             // Invalidate all data to trigger re-fetch and re-decryption
             await invalidateAll();
           } else {
-            createFormError = result.error || "Failed to create project";
+            console.error(result);
+            createFormError = "Failed to create project";
           }
         })
         .catch((error) => {
