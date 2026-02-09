@@ -163,10 +163,30 @@
     console.log("Toggle task status:", taskId);
   }
 
-  function deleteTask(taskId: string) {
-    // This would need to be implemented with actual API calls
-    // For now, we'll just keep it as a placeholder
-    console.log("Delete task:", taskId);
+  async function deleteTask(taskId: string) {
+    const formData = new FormData();
+    formData.set("taskId", taskId);
+
+    try {
+      const result = await fetch("?/deleteTask", {
+        method: "POST",
+        body: formData,
+        headers: {
+          Accept: "application/json",
+        },
+      }).then(async (res) => deserialize(await res.text()));
+
+      if (result.type === "success") {
+        // Invalidate all data to refresh the task list
+        await invalidateAll();
+      } else {
+        console.error("Delete task failed:", result);
+        alert("Failed to delete task");
+      }
+    } catch (error) {
+      console.error("Delete task error:", error);
+      alert("Failed to delete task");
+    }
   }
 
   function formatDate(dateStr: string | null): string {

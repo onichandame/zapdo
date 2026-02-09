@@ -5,7 +5,6 @@ import { and, count, desc, eq, like } from 'drizzle-orm';
 export const load = async ({ locals, url, params }) => {
   const { project_id: projectId } = params;
 
-
   const projectAccess = await locals.db.query.userProjectDek.findFirst({
     where: (table, { and, eq }) => and(
       eq(table.projectId, projectId),
@@ -63,7 +62,7 @@ export const actions = {
     const formData = await request.formData();
     const title = formData.get('title') as string;
     const description = formData.get('description') as string | null;
-    const status = formData.get('status') as string;
+    const status = formData.get('status') as schema.Task['status'];
     const priority = formData.get('priority') as string;
     const dueDate = formData.get('dueDate') as string | null;
 
@@ -85,10 +84,33 @@ export const actions = {
       title: title.trim(),
       description: description?.trim() || undefined,
       status: status || 'pending',
-      priority: priority || 'medium',
+      priority: parseInt(priority) || 0,
       dueDate: dueDate || undefined,
     }).returning();
 
     return { success: true, task };
+  },
+
+  deleteTask: async ({ request, locals, params }) => {
+    const { project_id: projectId } = params;
+    const formData = await request.formData();
+    const taskId = formData.get('taskId') as string;
+
+    if (!taskId) {
+      throw fail(400, { error: 'Task ID is required' });
+    }
+
+    const projectAccess = await locals.db.query.userProjectDek.findFirst({
+      where: (table: any, { eq, and }: any) => and(eq(table.projectId, projectId), eq(table.userId, locals.session!.user.id)),
+      columns: { id: true }
+    });
+
+    if (!projectAccess) {
+      throw fail(403, { error: 'Project not found or unauthorized' });
+    }
+
+    await locals.db.delete(schema.tasks).where(eq(schema.tasks.id, taskId));
+
+    return { success: true };
   }
 };
