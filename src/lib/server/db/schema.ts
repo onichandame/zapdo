@@ -1,4 +1,4 @@
-import { index, integer, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
+import { index, int, integer, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
 import { relations } from 'drizzle-orm';
 
 export type OAuthProvider = 'google' | 'github';
@@ -150,7 +150,7 @@ export const tasks = sqliteTable(
     title: text('title').notNull(),
     description: text('description'),
     status: text('status', { enum: ['pending', 'in_progress', 'completed', 'cancelled'] }).notNull().default('pending'),
-    priority: text('priority', { enum: ['urgent', 'high', 'medium', 'low'] }).notNull().default('medium'),
+    priority: int('priority',).notNull().default(0),
     dueDate: text('due_date'),
     createdAt: text('created_at').notNull().$defaultFn(() => new Date().toISOString()),
     updatedAt: text('updated_at').notNull().$defaultFn(() => new Date().toISOString())
