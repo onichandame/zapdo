@@ -1,4 +1,4 @@
-import { index, integer, sqliteTable, text, uniqueIndex, type AnySQLiteColumn } from 'drizzle-orm/sqlite-core';
+import { index, integer, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
 import { relations } from 'drizzle-orm';
 
 export type OAuthProvider = 'google' | 'github';
@@ -141,7 +141,7 @@ export const projectRelations = relations(project, ({ one, many }) => ({
 }));
 
 export const tasks = sqliteTable(
-  'task',
+  'tasks',
   {
     id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
     projectId: text('project_id')
@@ -179,7 +179,7 @@ export const taskToTag = sqliteTable(`task_to_tag`, {
   index(`task_to_tag_tag_id_idx`).on(table.tagId),
 ])
 
-export const tagRelations = relations(tags, ({ one, many }) => ({
+export const tagRelations = relations(tags, ({ many }) => ({
   taskToTag: many(taskToTag)
 }));
 
@@ -206,3 +206,7 @@ export type UserProjectDek = typeof userProjectDek.$inferSelect;
 export type NewUserProjectDek = typeof userProjectDek.$inferInsert;
 export type Task = typeof tasks.$inferSelect;
 export type NewTask = typeof tasks.$inferInsert;
+export type Tag = typeof tags.$inferSelect;
+export type NewTag = typeof tags.$inferInsert;
+export type TaskToTag = typeof taskToTag.$inferSelect;
+export type NewTaskToTag = typeof taskToTag.$inferInsert;
