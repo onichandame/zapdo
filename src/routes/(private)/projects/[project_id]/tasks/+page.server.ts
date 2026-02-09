@@ -1,9 +1,10 @@
 import { fail } from '@sveltejs/kit';
 import * as schema from '$lib/server/db/schema';
-import { and, desc, eq, like } from 'drizzle-orm';
+import { and, count, desc, eq, like } from 'drizzle-orm';
 
 export const load = async ({ locals, url, params }) => {
   const { project_id: projectId } = params;
+
 
   const projectAccess = await locals.db.query.userProjectDek.findFirst({
     where: (table, { and, eq }) => and(
@@ -16,6 +17,12 @@ export const load = async ({ locals, url, params }) => {
   if (!projectAccess) {
     throw fail(403, { error: 'Project not found or unauthorized' });
   }
+
+  const [[{ count: completedCount }], [{ count: inProgressCount }], [{ count: pendingCount }]] = await locals.db.batch([
+    locals.db.select({ count: count() }).from(schema.tasks).where(and(eq(schema.tasks.projectId, projectId), eq(schema.tasks.status, 'completed'))),
+    locals.db.select({ count: count() }).from(schema.tasks).where(and(eq(schema.tasks.projectId, projectId), eq(schema.tasks.status, 'in_progress'))),
+    locals.db.select({ count: count() }).from(schema.tasks).where(and(eq(schema.tasks.projectId, projectId), eq(schema.tasks.status, 'pending'))),
+  ])
 
   const query = locals.db.select().from(schema.tasks).orderBy(desc(schema.tasks.priority), desc(schema.tasks.createdAt))
   const searchQuery = btoa(url.searchParams.get('search')?.trim() || '');
@@ -38,15 +45,15 @@ export const load = async ({ locals, url, params }) => {
   }
 
   if (tagFilter) {
-    const tasks = await query.innerJoin(schema.taskToTag, eq(schema.tasks.id, schema.taskToTag.taskId)).where(and(
+    const result = await query.innerJoin(schema.taskToTag, eq(schema.tasks.id, schema.taskToTag.taskId)).where(and(
       ...conditions,
       eq(schema.taskToTag.tagId, tagFilter)
     ))
-    return { tasks, searchQuery, statusFilter, priorityFilter, tagFilter };
+    return { completedCount, inProgressCount, pendingCount, tasks: result.map(v => v.tasks), searchQuery, statusFilter, priorityFilter, tagFilter };
   }
 
   const tasks = await query.where(and(...conditions))
-  return { tasks, searchQuery, statusFilter, priorityFilter, tagFilter };
+  return { completedCount, inProgressCount, pendingCount, tasks, searchQuery, statusFilter, priorityFilter, tagFilter };
 };
 
 export const actions = {

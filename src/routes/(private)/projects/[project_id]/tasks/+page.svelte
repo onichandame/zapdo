@@ -2,70 +2,171 @@
   import {
     Plus,
     Calendar,
-    Flag,
-    Folder,
     Tag,
     CheckCircle,
     Circle,
     Clock,
     X,
   } from "phosphor-svelte";
-  import {
-    dummyTasks,
-    projects,
-    type Task,
-    type TaskStatus,
-    type TaskPriority,
-    getProjectById,
-    getPriorityColor,
-    getStatusColor,
-  } from "$lib/data/dummyTasks";
+  import { deserialize } from "$app/forms";
+  import { goto, invalidateAll } from "$app/navigation";
+  import type { Attachment } from "svelte/attachments";
+  import { decryptWithAesGcm, encryptWithAesGcm } from "$lib/crypto.js";
+  import { projectStore } from "$lib/stores/project.js";
 
   const { data } = $props();
 
-  let tasks = $state<Task[]>([...dummyTasks]);
-  let filterStatus = $state<TaskStatus | "all">("all");
-  let filterProject = $state<number | "all">("all");
-  let searchQuery = $state("");
+  // Use optional chaining to safely access data properties
+  let tasks = $derived(data.tasks || []);
+  let decryptedTasks = $state<typeof tasks>([]);
+  let filterStatus = $derived<typeof data.statusFilter | "all">(
+    data.statusFilter || "all",
+  );
+  let searchQuery = $derived(data.searchQuery || "");
+  let isCreating = $state(false);
 
-  let filteredTasks = $derived(
-    tasks
-      .filter((t) => filterStatus === "all" || t.status === filterStatus)
-      .filter((t) => filterProject === "all" || t.projectId === filterProject)
-      .filter(
-        (t) =>
-          searchQuery === "" ||
-          t.title.toLowerCase().includes(searchQuery.toLowerCase()),
-      )
-      .sort((a, b) => {
-        const priorityOrder = { urgent: 0, high: 1, medium: 2, low: 3 };
-        return priorityOrder[a.priority] - priorityOrder[b.priority];
-      }),
-  );
+  // Form state for task creation
+  let createTaskTitle = $state("");
+  let createTaskDescription = $state("");
+  let createTaskStatus = $state("pending");
+  let createTaskPriority = $state(0);
+  let createTaskDueDate = $state("");
+  let createFormError = $state("");
 
-  let completedCount = $derived(
-    tasks.filter((t) => t.status === "completed").length,
-  );
-  let inProgressCount = $derived(
-    tasks.filter((t) => t.status === "in_progress").length,
-  );
-  let pendingCount = $derived(
-    tasks.filter((t) => t.status === "pending").length,
-  );
+  let completedCount = $derived(data.completedCount);
+  let inProgressCount = $derived(data.inProgressCount);
+  let pendingCount = $derived(data.pendingCount);
 
-  function toggleTaskStatus(taskId: number) {
-    const task = tasks.find((t) => t.id === taskId);
-    if (task) {
-      if (task.status === "completed") {
-        task.status = "pending";
-      } else {
-        task.status = "completed";
+  $effect.pre(() => {
+    let active = true;
+    const tmpTasks = structuredClone(tasks);
+    const dek = $projectStore!.dek;
+    const decryptProjects = async () => {
+      await Promise.all(
+        tmpTasks.map(async (task) => {
+          await Promise.all([
+            (task.title = await decryptWithAesGcm(task.title, dek)),
+            (task.description = task.description
+              ? await decryptWithAesGcm(task.description, dek)
+              : ``),
+          ]);
+        }),
+      );
+      if (active) decryptedTasks = tmpTasks;
+    };
+    decryptProjects();
+    return () => {
+      active = false;
+    };
+  });
+
+  // Create attachment functions for dialogs
+  const createClickOutside: Attachment<HTMLElement> = (node) => {
+    const handleClick = (event: MouseEvent) => {
+      if (node && !node.contains(event.target as Node)) {
+        cancelCreate();
       }
+    };
+
+    document.addEventListener("click", handleClick, true);
+
+    return () => {
+      document.removeEventListener("click", handleClick, true);
+    };
+  };
+
+  function showCreateDialog() {
+    isCreating = true;
+    createTaskTitle = "";
+    createTaskDescription = "";
+    createTaskStatus = "pending";
+    createTaskPriority = 0;
+    createTaskDueDate = "";
+    createFormError = "";
+  }
+
+  function cancelCreate() {
+    isCreating = false;
+    createFormError = "";
+  }
+
+  // Handle Escape key to close dialogs
+  $effect(() => {
+    if (isCreating) {
+      const handleEscape = (e: KeyboardEvent) => {
+        if (e.key === "Escape") {
+          cancelCreate();
+        }
+      };
+
+      document.addEventListener("keydown", handleEscape);
+      return () => {
+        document.removeEventListener("keydown", handleEscape);
+      };
+    }
+  });
+
+  interface ActionResult {
+    type: "success" | "failure" | "redirect" | "error";
+    location?: string;
+    error?: any;
+    data?: any;
+  }
+
+  async function handleCreateTask(e: SubmitEvent) {
+    e.preventDefault();
+
+    const form = e.target as HTMLFormElement;
+
+    const formData = new FormData(form);
+
+    formData.set(
+      `title`,
+      await encryptWithAesGcm(createTaskTitle, $projectStore!.dek),
+    );
+    formData.set(
+      `description`,
+      await encryptWithAesGcm(createTaskDescription, $projectStore!.dek),
+    );
+
+    try {
+      const result = await fetch("?/createTask", {
+        method: "POST",
+        body: formData,
+        headers: {
+          Accept: "application/json",
+        },
+      }).then(async (res) => deserialize(await res.text()));
+
+      if (result.type === "success") {
+        isCreating = false;
+        // Invalidate all data to refresh the task list
+        await invalidateAll();
+      } else if (result.type === "redirect") {
+        goto(result.location);
+      } else if (result.type === "error") {
+        console.error(result.error);
+        createFormError = "Failed to create task";
+      } else {
+        createFormError =
+          JSON.stringify(result?.data) || "Failed to create task";
+      }
+    } catch (error) {
+      console.error("Form submission failed:", error);
+      createFormError = "Failed to submit form. Please try again.";
     }
   }
 
-  function deleteTask(taskId: number) {
-    tasks = tasks.filter((t) => t.id !== taskId);
+  function toggleTaskStatus(taskId: string) {
+    // This would need to be implemented with actual API calls
+    // For now, we'll just keep it as a placeholder
+    console.log("Toggle task status:", taskId);
+  }
+
+  function deleteTask(taskId: string) {
+    // This would need to be implemented with actual API calls
+    // For now, we'll just keep it as a placeholder
+    console.log("Delete task:", taskId);
   }
 
   function formatDate(dateStr: string | null): string {
@@ -83,9 +184,29 @@
     });
   }
 
-  function isOverdue(task: Task): boolean {
+  function isOverdue(task: any): boolean {
     if (!task.dueDate || task.status === "completed") return false;
     return new Date(task.dueDate) < new Date();
+  }
+
+  function getPriorityColor(priority: number): string {
+    const colors: Record<string, string> = {
+      3: "#ef4444",
+      2: "#f97316",
+      1: "#3b82f6",
+      0: "#10b981",
+    };
+    return colors[priority] || "#3b82f6";
+  }
+
+  function getStatusColor(status: string): string {
+    const colors: Record<string, string> = {
+      pending: "#94a3b8",
+      in_progress: "#3b82f6",
+      completed: "#22c55e",
+      cancelled: "#ef4444",
+    };
+    return colors[status] || "#94a3b8";
   }
 </script>
 
@@ -96,6 +217,7 @@
     </div>
     <button
       class="add-button flex items-center gap-2 px-5 py-2.5 bg-primary text-primary-foreground rounded-lg font-semibold cursor-pointer transition-opacity hover:opacity-90 border-none"
+      onclick={showCreateDialog}
     >
       <Plus size={20} />
       <span>Add Task</span>
@@ -180,21 +302,11 @@
         <option value="completed">Completed</option>
         <option value="cancelled">Cancelled</option>
       </select>
-      <select
-        bind:value={filterProject}
-        class="filter-select px-4 py-2.5 bg-primary text-primary-foreground rounded-lg border border-border text-sm cursor-pointer"
-      >
-        <option value="all">All Projects</option>
-        {#each projects as project}
-          <option value={project.id}>{project.name}</option>
-        {/each}
-      </select>
     </div>
   </div>
 
   <div class="task-list flex flex-col gap-3">
-    {#each filteredTasks as task (task.id)}
-      {@const project = getProjectById(task.projectId)}
+    {#each decryptedTasks as task (task.id)}
       <div
         class="task-card group flex items-start gap-4 p-5 bg-primary text-primary-foreground rounded-lg border border-border shadow-card transition-all hover:bg-background hover:border-muted hover:text-foreground hover:shadow-none"
         class:completed={task.status === "completed"}
@@ -232,15 +344,6 @@
               >
                 {task.priority}
               </span>
-              {#if project}
-                <span
-                  class="project-badge flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium"
-                  style="background-color: {project.color}20; color: {project.color}"
-                >
-                  <Folder size={12} />
-                  {project.name}
-                </span>
-              {/if}
             </div>
           </div>
           {#if task.description}
@@ -258,14 +361,14 @@
               <Calendar size={14} />
               {formatDate(task.dueDate)}
             </span>
-            {#if task.tags.length > 0}
+            {#if task.tags?.length > 0}
               <div class="tags flex items-center gap-2">
                 {#each task.tags.slice(0, 3) as tag}
                   <span
                     class="tag flex items-center gap-1 text-xs text-muted-foreground"
                   >
                     <Tag size={12} />
-                    {tag}
+                    {tag.tag}
                   </span>
                 {/each}
                 {#if task.tags.length > 3}
@@ -303,6 +406,160 @@
       </div>
     {/each}
   </div>
+
+  {#if isCreating}
+    <div
+      class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+    >
+      <div
+        class="bg-primary text-primary-foreground rounded-lg border border-border shadow-card max-w-md w-full p-6"
+        {@attach createClickOutside}
+      >
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-lg font-semibold text-foreground">Create Task</h3>
+          <button
+            class="p-1 rounded-md hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer"
+            onclick={cancelCreate}
+            aria-label="Close dialog"
+          >
+            <X size={20} />
+          </button>
+        </div>
+
+        <form method="POST" action="?/createTask" onsubmit={handleCreateTask}>
+          <div class="space-y-4">
+            <div>
+              <label
+                for="create-title"
+                class="block text-sm font-medium text-foreground mb-1"
+              >
+                Task Title
+              </label>
+              <input
+                type="text"
+                id="create-title"
+                name="title"
+                value={createTaskTitle}
+                oninput={(e) =>
+                  (createTaskTitle = (e.target as HTMLInputElement).value)}
+                required
+                class="w-full px-3 py-2 bg-primary text-primary-foreground border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                placeholder="Enter task title"
+              />
+            </div>
+
+            <div>
+              <label
+                for="create-description"
+                class="block text-sm font-medium text-foreground mb-1"
+              >
+                Description (optional)
+              </label>
+              <textarea
+                id="create-description"
+                name="description"
+                value={createTaskDescription}
+                oninput={(e) =>
+                  (createTaskDescription = (e.target as HTMLTextAreaElement)
+                    .value)}
+                class="w-full px-3 py-2 bg-primary text-primary-foreground border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                rows="3"
+                placeholder="Describe your task"
+              ></textarea>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label
+                  for="create-status"
+                  class="block text-sm font-medium text-foreground mb-1"
+                >
+                  Status
+                </label>
+                <select
+                  id="create-status"
+                  name="status"
+                  value={createTaskStatus}
+                  oninput={(e) =>
+                    (createTaskStatus = (e.target as HTMLSelectElement).value)}
+                  class="w-full px-3 py-2 bg-primary text-primary-foreground border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                >
+                  <option value="pending">Pending</option>
+                  <option value="in_progress">In Progress</option>
+                  <option value="completed">Completed</option>
+                  <option value="cancelled">Cancelled</option>
+                </select>
+              </div>
+
+              <div>
+                <label
+                  for="create-priority"
+                  class="block text-sm font-medium text-foreground mb-1"
+                >
+                  Priority
+                </label>
+                <select
+                  id="create-priority"
+                  name="priority"
+                  value={createTaskPriority}
+                  oninput={(e) =>
+                    (createTaskPriority = parseInt(
+                      (e.target as HTMLSelectElement).value,
+                    ))}
+                  class="w-full px-3 py-2 bg-primary text-primary-foreground border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                >
+                  <option value="3">Urgent</option>
+                  <option value="2">High</option>
+                  <option value="1">Medium</option>
+                  <option value="0">Low</option>
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label
+                for="create-due-date"
+                class="block text-sm font-medium text-foreground mb-1"
+              >
+                Due Date (optional)
+              </label>
+              <input
+                type="date"
+                id="create-due-date"
+                name="dueDate"
+                value={createTaskDueDate}
+                oninput={(e) =>
+                  (createTaskDueDate = (e.target as HTMLInputElement).value)}
+                class="w-full px-3 py-2 bg-primary text-primary-foreground border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+              />
+            </div>
+
+            {#if createFormError}
+              <div class="text-destructive text-sm">
+                {createFormError}
+              </div>
+            {/if}
+
+            <div class="flex gap-3">
+              <button
+                type="submit"
+                class="flex-1 px-4 py-2.5 bg-accent text-accent-foreground rounded-lg border border-border font-medium transition-colors hover:bg-primary hover:text-primary-foreground cursor-pointer"
+              >
+                Create Task
+              </button>
+              <button
+                type="button"
+                class="flex-1 px-4 py-2.5 bg-background text-foreground rounded-lg border border-border font-medium transition-colors hover:bg-muted hover:text-muted-foreground cursor-pointer"
+                onclick={cancelCreate}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  {/if}
 </div>
 
 <style>
@@ -310,4 +567,3 @@
     opacity: 0.7;
   }
 </style>
-

@@ -33,7 +33,10 @@
         $kekStore,
       );
       const dekKey = await importAesKey(decryptedDekStr);
-      $dekStore[project.id] = dekKey;
+      dekStore.update((old) => {
+        old[project.id] = dekKey;
+        return old;
+      });
     }
   })().catch((e) => {
     console.error(e);
