@@ -136,8 +136,65 @@ export const projectRelations = relations(project, ({ one, many }) => ({
     fields: [project.userId],
     references: [user.id]
   }),
-  deks: many(userProjectDek, { relationName: 'projectDeks' })
+  deks: many(userProjectDek, { relationName: 'projectDeks' }),
+  tasks: many(tasks)
 }));
+
+export const tasks = sqliteTable(
+  'task',
+  {
+    id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+    projectId: text('project_id')
+      .notNull()
+      .references(() => project.id, { onDelete: 'cascade' }),
+    title: text('title').notNull(),
+    description: text('description'),
+    status: text('status', { enum: ['pending', 'in_progress', 'completed', 'cancelled'] }).notNull().default('pending'),
+    priority: text('priority', { enum: ['urgent', 'high', 'medium', 'low'] }).notNull().default('medium'),
+    dueDate: text('due_date'),
+    createdAt: text('created_at').notNull().$defaultFn(() => new Date().toISOString()),
+    updatedAt: text('updated_at').notNull().$defaultFn(() => new Date().toISOString())
+  },
+  (table) => [
+    index('task_project_id_idx').on(table.projectId),
+    index('task_status_idx').on(table.status),
+    index('task_priority_idx').on(table.priority),
+    index('task_due_date_idx').on(table.dueDate)
+  ]
+);
+
+export const tags = sqliteTable(`tags`, {
+  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  tag: text().notNull(),
+  createdAt: text('created_at').notNull().$defaultFn(() => new Date().toISOString()),
+  updatedAt: text('updated_at').notNull().$defaultFn(() => new Date().toISOString()),
+})
+
+export const taskToTag = sqliteTable(`task_to_tag`, {
+  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  taskId: text(`task_id`).notNull().references(() => tasks.id, { onDelete: `cascade` }),
+  tagId: text(`tag_id`).notNull().references(() => tags.id, { onDelete: `cascade` })
+}, table => [
+  index(`task_to_tag_task_id_idx`).on(table.taskId),
+  index(`task_to_tag_tag_id_idx`).on(table.tagId),
+])
+
+export const tagRelations = relations(tags, ({ one, many }) => ({
+  taskToTag: many(taskToTag)
+}));
+
+export const taskRelations = relations(tasks, ({ one, many }) => ({
+  project: one(project, {
+    fields: [tasks.projectId],
+    references: [project.id]
+  }),
+  taskToTag: many(taskToTag)
+}));
+
+export const taskToTagRelations = relations(taskToTag, ({ one }) => ({
+  tasks: one(tasks, { fields: [taskToTag.taskId], references: [tasks.id] }),
+  tags: one(tags, { fields: [taskToTag.tagId], references: [tags.id] })
+}))
 
 export type User = typeof user.$inferSelect;
 export type NewUser = typeof user.$inferInsert;
@@ -147,3 +204,5 @@ export type Project = typeof project.$inferSelect;
 export type NewProject = typeof project.$inferInsert;
 export type UserProjectDek = typeof userProjectDek.$inferSelect;
 export type NewUserProjectDek = typeof userProjectDek.$inferInsert;
+export type Task = typeof tasks.$inferSelect;
+export type NewTask = typeof tasks.$inferInsert;
