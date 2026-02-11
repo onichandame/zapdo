@@ -580,7 +580,7 @@
           <input type="hidden" name="projectId" value={deleteProjectId} />
           <button
             type="submit"
-            class="flex-1 px-4 py-2.5 bg-destructive text-destructive-foreground rounded-lg border border-border font-medium transition-colors hover:bg-[#ef4444] hover:text-white disabled:opacity-50 cursor-pointer"
+            class="btn-destructive"
             disabled={isDeleting}
           >
             {#if isDeleting}

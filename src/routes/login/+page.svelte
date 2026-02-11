@@ -23,13 +23,9 @@
       <p>Sign in to manage your private tasks securely</p>
     </div>
 
-    <div
-      class="bg-primary text-primary-foreground rounded-lg border border-border shadow-card p-6 sm:p-8"
-    >
+    <div class="card-form">
       {#if error}
-        <div
-          class="mb-6 p-3 bg-destructive/10 border border-destructive/20 rounded-lg text-destructive-foreground"
-        >
+        <div class="alert-error">
           <div class="flex items-center gap-2">
             <Lock size={16} />
             <span class="text-sm">{error}</span>
@@ -39,7 +35,7 @@
 
       <a
         href="/auth/google"
-        class="w-full flex items-center justify-center gap-3 px-6 py-3 bg-white text-gray-700 rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors"
+        class="btn-secondary w-full justify-center"
       >
         <GoogleLogo size={20} weight="fill" />
         <span>Continue with Google</span>
