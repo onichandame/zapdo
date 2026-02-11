@@ -3,7 +3,6 @@
     Folder,
     Plus,
     Trash,
-    X,
     Star,
     Rocket,
     ChartBar,
@@ -16,7 +15,6 @@
   } from "phosphor-svelte";
   import { deserialize, enhance } from "$app/forms";
   import { invalidateAll } from "$app/navigation";
-  import type { Attachment } from "svelte/attachments";
   import {
     generateAesKey,
     encryptWithAesGcm,
@@ -28,6 +26,14 @@
   import { kekStore } from "$lib/stores/kekStore.js";
   import type { ActionResult } from "@sveltejs/kit";
   import type { ActionData } from "./$types.js";
+  import Button from "$lib/components/ui/button.svelte";
+  import Card from "$lib/components/ui/card.svelte";
+  import Input from "$lib/components/ui/input.svelte";
+  import Textarea from "$lib/components/ui/textarea.svelte";
+  import Select from "$lib/components/ui/select.svelte";
+  import Label from "$lib/components/ui/label.svelte";
+  import Error from "$lib/components/ui/error.svelte";
+  import Modal from "$lib/components/ui/modal.svelte";
 
   let { data } = $props();
 
@@ -59,49 +65,6 @@
   let createFormError = $state("");
 
   let isRefreshing = $state(false);
-
-  // Create attachment functions
-  const deleteClickOutside: Attachment<HTMLElement> = (node) => {
-    const handleClick = (event: MouseEvent) => {
-      if (node && !node.contains(event.target as Node)) {
-        cancelDelete();
-      }
-    };
-
-    document.addEventListener("click", handleClick, true);
-
-    return () => {
-      document.removeEventListener("click", handleClick, true);
-    };
-  };
-
-  const editClickOutside: Attachment<HTMLElement> = (node) => {
-    const handleClick = (event: MouseEvent) => {
-      if (node && !node.contains(event.target as Node)) {
-        cancelEdit();
-      }
-    };
-
-    document.addEventListener("click", handleClick, true);
-
-    return () => {
-      document.removeEventListener("click", handleClick, true);
-    };
-  };
-
-  const createClickOutside: Attachment<HTMLElement> = (node) => {
-    const handleClick = (event: MouseEvent) => {
-      if (node && !node.contains(event.target as Node)) {
-        cancelCreate();
-      }
-    };
-
-    document.addEventListener("click", handleClick, true);
-
-    return () => {
-      document.removeEventListener("click", handleClick, true);
-    };
-  };
 
   function showDeleteConfirmation(projectId: string, projectName: string) {
     deleteProjectId = projectId;
@@ -350,13 +313,13 @@
   {#if data?.projects && data.projects.length === 0}
     <div class="text-center py-12">
       <div class="text-muted-foreground mb-4">No projects yet</div>
-      <button
-        class="flex items-center gap-3 px-6 py-3 bg-primary text-primary-foreground rounded-lg border border-border hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer"
+      <Button
+        variant="secondary"
+        class="bg-primary text-primary-foreground hover:bg-accent hover:text-accent-foreground"
         onclick={() => showCreateDialog()}
       >
-        <Plus size={20} />
-        <span> Create Your First Project </span>
-      </button>
+        Create Your First Project
+      </Button>
     </div>
   {:else}
     <div class="text-center py-12">
@@ -366,10 +329,10 @@
 {:else}
   {#each decryptedProjects as project (project.id)}
     <div class="group project-item mb-4">
-      <div
-        class="flex items-center gap-4 p-6 sm:p-8 bg-primary text-primary-foreground rounded-lg border border-border shadow-card transition-all hover:bg-accent hover:border-muted hover:text-accent-foreground hover:shadow-none cursor-pointer"
+      <Card
+        variant="project"
         role="button"
-        tabindex="0"
+        tabindex={0}
         onclick={() => {
           showEditDialog(
             project.id,
@@ -427,8 +390,9 @@
         </div>
 
         <div class="flex gap-2">
-          <button
-            class="edit-button flex-shrink-0 bg-none border-none cursor-pointer p-2 rounded-md transition-all hover:bg-card hover:text-card-foreground opacity-0 group-hover:opacity-100"
+          <Button
+            variant="ghost"
+            class="flex-shrink-0 bg-none border-none cursor-pointer p-2 rounded-md transition-all hover:bg-card hover:text-card-foreground opacity-0 group-hover:opacity-100"
             onclick={(e) => {
               e.stopPropagation();
               showEditDialog(
@@ -455,9 +419,10 @@
             aria-label={`Edit project ${project.name}`}
           >
             <PencilSimple size={18} />
-          </button>
-          <button
-            class="view-tasks-button flex-shrink-0 bg-none border-none cursor-pointer p-2 rounded-md transition-all hover:bg-accent hover:text-accent-foreground opacity-0 group-hover:opacity-100"
+          </Button>
+          <Button
+            variant="ghost"
+            class="flex-shrink-0 bg-none border-none cursor-pointer p-2 rounded-md transition-all hover:bg-accent hover:text-accent-foreground opacity-0 group-hover:opacity-100"
             onclick={(e) => {
               e.stopPropagation();
               window.location.href = `/projects/${project.id}/tasks`;
@@ -472,9 +437,10 @@
             aria-label={`View tasks for ${project.name}`}
           >
             <Folder size={18} />
-          </button>
-          <button
-            class="delete-button flex-shrink-0 bg-none border-none cursor-pointer p-2 rounded-md transition-all hover:bg-[rgba(239,68,68,0.1)] hover:text-[#ef4444] opacity-0 group-hover:opacity-100"
+          </Button>
+          <Button
+            variant="ghost"
+            class="flex-shrink-0 bg-none border-none cursor-pointer p-2 rounded-md transition-all hover:bg-[rgba(239,68,68,0.1)] hover:text-[#ef4444] opacity-0 group-hover:opacity-100"
             onclick={(e) => {
               e.stopPropagation();
               showDeleteConfirmation(project.id, project.name);
@@ -489,22 +455,24 @@
             aria-label="Delete project"
           >
             <Trash size={18} />
-          </button>
+          </Button>
         </div>
-      </div>
+      </Card>
     </div>
   {/each}
 
   <div class="mt-8 flex gap-3">
-    <button
-      class="flex items-center gap-3 px-6 py-3 bg-primary text-primary-foreground rounded-lg border border-border hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer"
+    <Button
+      variant="secondary"
+      class="bg-primary text-primary-foreground hover:bg-accent hover:text-accent-foreground"
       onclick={() => showCreateDialog()}
     >
       <Plus size={20} />
-      <span>Create New Project</span>
-    </button>
-    <button
-      class="flex items-center gap-2 px-4 py-3 bg-muted text-muted-foreground rounded-lg border border-border hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer"
+      Create New Project
+    </Button>
+    <Button
+      variant="secondary"
+      class="bg-muted text-muted-foreground hover:bg-accent hover:text-accent-foreground"
       onclick={refreshProjects}
       disabled={isRefreshing}
     >
@@ -517,390 +485,274 @@
         <ArrowClockwise size={16} />
         Refresh
       {/if}
-    </button>
+    </Button>
   </div>
 {/if}
 
-{#if deleteProjectId}
-  <div
-    class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
-  >
-    <div
-      class="bg-primary text-primary-foreground rounded-lg border border-border shadow-card max-w-md w-full p-6"
-      {@attach deleteClickOutside}
+<Modal
+  open={deleteProjectId !== ""}
+  onClose={cancelDelete}
+  title="Confirm Deletion"
+>
+  <p class="text-sm mb-6">
+    Are you sure you want to delete the project "<span
+      class="font-medium text-foreground">{deleteProjectName}</span
+    >"? This action cannot be undone and will remove all associated data.
+  </p>
+
+  {#if deleteFormError}
+    <Error>
+      {deleteFormError}
+    </Error>
+  {/if}
+
+  <div class="flex gap-3">
+    <Button
+      variant="ghost"
+      class="flex-1"
+      onclick={cancelDelete}
+      disabled={isDeleting}
     >
-      <div class="flex items-center justify-between mb-4">
-        <h3 class="text-lg font-semibold text-foreground">Confirm Deletion</h3>
-        <button
-          class="p-1 rounded-md hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer"
-          onclick={cancelDelete}
-          aria-label="Close dialog"
-        >
-          <X size={20} />
-        </button>
+      Cancel
+    </Button>
+    <form
+      method="POST"
+      action="?/deleteProject"
+      use:enhance={() => {
+        isDeleting = true;
+        return async ({ result, update }) => {
+          if (result.type === "success") {
+            deleteProjectId = "";
+            deleteProjectName = "";
+            isDeleting = false;
+            // Invalidate all data to refresh the project list
+            await update({ invalidateAll: true });
+          } else {
+            isDeleting = false;
+            // Error will be handled in the $effect
+          }
+        };
+      }}
+    >
+      <input type="hidden" name="projectId" value={deleteProjectId} />
+      <Button type="submit" variant="destructive" disabled={isDeleting}>
+        {#if isDeleting}
+          <span class="flex items-center justify-center">
+            <span
+              class="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin mr-2"
+            ></span>
+            Deleting...
+          </span>
+        {:else}
+          Delete Project
+        {/if}
+      </Button>
+    </form>
+  </div>
+</Modal>
+<Modal open={isCreating} onClose={cancelCreate} title="Create Project">
+  <form
+    method="POST"
+    action="?/createProject"
+    use:enhance={() => {
+      return async ({ result, update }) => {
+        if (result.type === "success") {
+          isCreating = false;
+          // Invalidate all data to refresh the project list
+          await update({ invalidateAll: true });
+        } else {
+          // Error will be handled in the $effect
+        }
+      };
+    }}
+    onsubmit={handleCreateProjectSubmit}
+  >
+    <div class="space-y-4">
+      <div>
+        <Label for="create-name">Project Name</Label>
+        <Input
+          type="text"
+          id="create-name"
+          name="name"
+          value={createProjectName}
+          oninput={(e) =>
+            (createProjectName = (e.target as HTMLInputElement).value)}
+          required
+          placeholder="Enter project name"
+        />
       </div>
 
-      <p class="text-sm mb-6">
-        Are you sure you want to delete the project "<span
-          class="font-medium text-foreground">{deleteProjectName}</span
-        >"? This action cannot be undone and will remove all associated data.
-      </p>
+      <div>
+        <Label for="create-description">Description (optional)</Label>
+        <Textarea
+          id="create-description"
+          name="description"
+          value={createProjectDescription}
+          oninput={(e) =>
+            (createProjectDescription = (e.target as HTMLTextAreaElement)
+              .value)}
+          rows={3}
+          placeholder="Describe your project"
+        />
+      </div>
 
-      {#if deleteFormError}
-        <div class="text-destructive text-sm mb-4">{deleteFormError}</div>
+      <div>
+        <Label for="create-color">Color</Label>
+        <Select
+          id="create-color"
+          name="color"
+          value={createProjectColor}
+          oninput={(e) =>
+            (createProjectColor = (e.target as HTMLSelectElement).value)}
+          required
+        >
+          <option value="#3b82f6">Blue</option>
+          <option value="#ef4444">Red</option>
+          <option value="#10b981">Green</option>
+          <option value="#f59e0b">Amber</option>
+          <option value="#8b5cf6">Purple</option>
+          <option value="#ec4899">Pink</option>
+          <option value="#06b6d4">Cyan</option>
+          <option value="#f97316">Orange</option>
+        </Select>
+      </div>
+
+      <div>
+        <Label for="create-icon">Icon</Label>
+        <Select
+          id="create-icon"
+          name="icon"
+          value={createProjectIcon}
+          oninput={(e) =>
+            (createProjectIcon = (e.target as HTMLSelectElement).value)}
+          required
+        >
+          <option value="folder">Folder</option>
+          <option value="star">Star</option>
+          <option value="rocket">Rocket</option>
+          <option value="chart">Chart</option>
+          <option value="lightbulb">Lightbulb</option>
+          <option value="target">Target</option>
+          <option value="book">Book</option>
+          <option value="gear">Gear</option>
+        </Select>
+      </div>
+
+      {#if createFormError}
+        <Error>
+          {createFormError}
+        </Error>
       {/if}
 
       <div class="flex gap-3">
-        <button
-          class="flex-1 px-4 py-2.5 bg-background text-foreground rounded-lg border border-border font-medium transition-colors hover:bg-muted hover:text-muted-foreground cursor-pointer"
-          onclick={cancelDelete}
-          disabled={isDeleting}
+        <Button type="submit" variant="primary" class="flex-1">
+          Create Project
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          class="flex-1"
+          onclick={cancelCreate}
         >
           Cancel
-        </button>
-        <form
-          method="POST"
-          action="?/deleteProject"
-          use:enhance={() => {
-            isDeleting = true;
-            return async ({ result, update }) => {
-              if (result.type === "success") {
-                deleteProjectId = "";
-                deleteProjectName = "";
-                isDeleting = false;
-                // Invalidate all data to refresh the project list
-                await update({ invalidateAll: true });
-              } else {
-                isDeleting = false;
-                // Error will be handled in the $effect
-              }
-            };
-          }}
-        >
-          <input type="hidden" name="projectId" value={deleteProjectId} />
-          <button
-            type="submit"
-            class="btn-destructive"
-            disabled={isDeleting}
-          >
-            {#if isDeleting}
-              <span class="flex items-center justify-center">
-                <span
-                  class="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin mr-2"
-                ></span>
-                Deleting...
-              </span>
-            {:else}
-              Delete Project
-            {/if}
-          </button>
-        </form>
+        </Button>
       </div>
     </div>
-  </div>
-{/if}
+  </form>
+</Modal>
 
-{#if isCreating}
-  <div
-    class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+<Modal open={isEditing} onClose={cancelEdit} title="Edit Project">
+  <form
+    method="POST"
+    action="?/updateProject"
+    use:enhance={() => {
+      return async ({ result, update }) => {
+        if (result.type === "success") {
+          editProjectId = "";
+          editFormError = "";
+          isEditing = false;
+          // Invalidate all data to refresh the project list
+          await update({ invalidateAll: true });
+        } else {
+          // Error will be handled in the $effect
+        }
+      };
+    }}
   >
-    <div
-      class="bg-primary text-primary-foreground rounded-lg border border-border shadow-card max-w-md w-full p-6"
-      {@attach createClickOutside}
-    >
-      <div class="flex items-center justify-between mb-4">
-        <h3 class="text-lg font-semibold text-foreground">Create Project</h3>
-        <button
-          class="p-1 rounded-md hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer"
-          onclick={cancelCreate}
-          aria-label="Close dialog"
-        >
-          <X size={20} />
-        </button>
+    <input type="hidden" name="projectId" value={editProjectId} />
+    <div class="space-y-4">
+      <div>
+        <Label for="edit-name">Project Name</Label>
+        <Input
+          type="text"
+          id="edit-name"
+          name="name"
+          value={editProjectName}
+          required
+          placeholder="Enter project name"
+        />
       </div>
 
-      <form
-        method="POST"
-        action="?/createProject"
-        use:enhance={() => {
-          return async ({ result, update }) => {
-            if (result.type === "success") {
-              isCreating = false;
-              // Invalidate all data to refresh the project list
-              await update({ invalidateAll: true });
-            } else {
-              // Error will be handled in the $effect
-            }
-          };
-        }}
-        onsubmit={handleCreateProjectSubmit}
-      >
-        <div class="space-y-4">
-          <div>
-            <label
-              for="create-name"
-              class="block text-sm font-medium text-foreground mb-1"
-            >
-              Project Name
-            </label>
-            <input
-              type="text"
-              id="create-name"
-              name="name"
-              value={createProjectName}
-              oninput={(e) =>
-                (createProjectName = (e.target as HTMLInputElement).value)}
-              required
-              class="w-full px-3 py-2 bg-primary text-primary-foreground border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-              placeholder="Enter project name"
-            />
-          </div>
+      <div>
+        <Label for="edit-description">Description (optional)</Label>
+        <Textarea
+          id="edit-description"
+          name="description"
+          value={editProjectDescription}
+          oninput={(e) =>
+            (editProjectDescription = (e.target as HTMLTextAreaElement).value)}
+          rows={3}
+          placeholder="Describe your project"
+        />
+      </div>
 
-          <div>
-            <label
-              for="create-description"
-              class="block text-sm font-medium text-foreground mb-1"
-            >
-              Description (optional)
-            </label>
-            <textarea
-              id="create-description"
-              name="description"
-              value={createProjectDescription}
-              oninput={(e) =>
-                (createProjectDescription = (e.target as HTMLTextAreaElement)
-                  .value)}
-              class="w-full px-3 py-2 bg-primary text-primary-foreground border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-              rows="3"
-              placeholder="Describe your project"
-            ></textarea>
-          </div>
+      <div>
+        <Label for="edit-color">Color</Label>
+        <Select id="edit-color" name="color" value={editProjectColor} required>
+          <option value="#3b82f6">Blue</option>
+          <option value="#ef4444">Red</option>
+          <option value="#10b981">Green</option>
+          <option value="#f59e0b">Amber</option>
+          <option value="#8b5cf6">Purple</option>
+          <option value="#ec4899">Pink</option>
+          <option value="#06b6d4">Cyan</option>
+          <option value="#f97316">Orange</option>
+        </Select>
+      </div>
 
-          <div>
-            <label
-              for="create-color"
-              class="block text-sm font-medium text-foreground mb-1"
-            >
-              Color
-            </label>
-            <select
-              id="create-color"
-              name="color"
-              value={createProjectColor}
-              oninput={(e) =>
-                (createProjectColor = (e.target as HTMLSelectElement).value)}
-              required
-              class="w-full px-3 py-2 bg-primary text-primary-foreground border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-            >
-              <option value="#3b82f6">Blue</option>
-              <option value="#ef4444">Red</option>
-              <option value="#10b981">Green</option>
-              <option value="#f59e0b">Amber</option>
-              <option value="#8b5cf6">Purple</option>
-              <option value="#ec4899">Pink</option>
-              <option value="#06b6d4">Cyan</option>
-              <option value="#f97316">Orange</option>
-            </select>
-          </div>
+      <div>
+        <Label for="edit-icon">Icon</Label>
+        <Select id="edit-icon" name="icon" value={editProjectIcon} required>
+          <option value="folder">Folder</option>
+          <option value="star">Star</option>
+          <option value="rocket">Rocket</option>
+          <option value="chart">Chart</option>
+          <option value="lightbulb">Lightbulb</option>
+          <option value="target">Target</option>
+          <option value="book">Book</option>
+          <option value="gear">Gear</option>
+        </Select>
+      </div>
 
-          <div>
-            <label
-              for="create-icon"
-              class="block text-sm font-medium text-foreground mb-1"
-            >
-              Icon
-            </label>
-            <select
-              id="create-icon"
-              name="icon"
-              value={createProjectIcon}
-              oninput={(e) =>
-                (createProjectIcon = (e.target as HTMLSelectElement).value)}
-              required
-              class="w-full px-3 py-2 bg-primary text-primary-foreground border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-            >
-              <option value="folder">Folder</option>
-              <option value="star">Star</option>
-              <option value="rocket">Rocket</option>
-              <option value="chart">Chart</option>
-              <option value="lightbulb">Lightbulb</option>
-              <option value="target">Target</option>
-              <option value="book">Book</option>
-              <option value="gear">Gear</option>
-            </select>
-          </div>
+      {#if editFormError}
+        <Error>
+          {editFormError}
+        </Error>
+      {/if}
 
-          {#if createFormError}
-            <div class="text-destructive text-sm">
-              {createFormError}
-            </div>
-          {/if}
-
-          <div class="flex gap-3">
-            <button
-              type="submit"
-              class="flex-1 px-4 py-2.5 bg-accent text-accent-foreground rounded-lg border border-border font-medium transition-colors hover:bg-primary hover:text-primary-foreground cursor-pointer"
-            >
-              Create Project
-            </button>
-            <button
-              type="button"
-              class="flex-1 px-4 py-2.5 bg-background text-foreground rounded-lg border border-border font-medium transition-colors hover:bg-muted hover:text-muted-foreground cursor-pointer"
-              onclick={cancelCreate}
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
-      </form>
-    </div>
-  </div>
-{/if}
-
-{#if isEditing}
-  <div
-    class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
-  >
-    <div
-      class="bg-primary text-primary-foreground rounded-lg border border-border shadow-card max-w-md w-full p-6"
-      {@attach editClickOutside}
-    >
-      <div class="flex items-center justify-between mb-4">
-        <h3 class="text-lg font-semibold text-foreground">Edit Project</h3>
-        <button
-          class="p-1 rounded-md hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer"
+      <div class="flex gap-3">
+        <Button type="submit" variant="primary" class="flex-1">
+          Update Project
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          class="flex-1"
           onclick={cancelEdit}
-          aria-label="Close dialog"
         >
-          <X size={20} />
-        </button>
+          Cancel
+        </Button>
       </div>
-
-      <form
-        method="POST"
-        action="?/updateProject"
-        use:enhance={() => {
-          return async ({ result, update }) => {
-            if (result.type === "success") {
-              editProjectId = "";
-              editFormError = "";
-              isEditing = false;
-              // Invalidate all data to refresh the project list
-              await update({ invalidateAll: true });
-            } else {
-              // Error will be handled in the $effect
-            }
-          };
-        }}
-      >
-        <input type="hidden" name="projectId" value={editProjectId} />
-        <div class="space-y-4">
-          <div>
-            <label
-              for="edit-name"
-              class="block text-sm font-medium text-foreground mb-1"
-            >
-              Project Name
-            </label>
-            <input
-              type="text"
-              id="edit-name"
-              name="name"
-              value={editProjectName}
-              required
-              class="w-full px-3 py-2 bg-primary text-primary-foreground border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-              placeholder="Enter project name"
-            />
-          </div>
-
-          <div>
-            <label
-              for="edit-description"
-              class="block text-sm font-medium text-foreground mb-1"
-            >
-              Description (optional)
-            </label>
-            <textarea
-              id="edit-description"
-              name="description"
-              class="w-full px-3 py-2 bg-primary text-primary-foreground border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-              rows="3"
-              placeholder="Describe your project"
-              >{editProjectDescription}</textarea
-            >
-          </div>
-
-          <div>
-            <label
-              for="edit-color"
-              class="block text-sm font-medium text-foreground mb-1"
-            >
-              Color
-            </label>
-            <select
-              id="edit-color"
-              name="color"
-              value={editProjectColor}
-              required
-              class="w-full px-3 py-2 bg-primary text-primary-foreground border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-            >
-              <option value="#3b82f6">Blue</option>
-              <option value="#ef4444">Red</option>
-              <option value="#10b981">Green</option>
-              <option value="#f59e0b">Amber</option>
-              <option value="#8b5cf6">Purple</option>
-              <option value="#ec4899">Pink</option>
-              <option value="#06b6d4">Cyan</option>
-              <option value="#f97316">Orange</option>
-            </select>
-          </div>
-
-          <div>
-            <label
-              for="edit-icon"
-              class="block text-sm font-medium text-foreground mb-1"
-            >
-              Icon
-            </label>
-            <select
-              id="edit-icon"
-              name="icon"
-              value={editProjectIcon}
-              required
-              class="w-full px-3 py-2 bg-primary text-primary-foreground border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-            >
-              <option value="folder">Folder</option>
-              <option value="star">Star</option>
-              <option value="rocket">Rocket</option>
-              <option value="chart">Chart</option>
-              <option value="lightbulb">Lightbulb</option>
-              <option value="target">Target</option>
-              <option value="book">Book</option>
-              <option value="gear">Gear</option>
-            </select>
-          </div>
-
-          {#if editFormError}
-            <div class="text-destructive text-sm">{editFormError}</div>
-          {/if}
-
-          <div class="flex gap-3">
-            <button
-              type="submit"
-              class="flex-1 px-4 py-2.5 bg-accent text-accent-foreground rounded-lg border border-border font-medium transition-colors hover:bg-primary hover:text-primary-foreground cursor-pointer"
-            >
-              Update Project
-            </button>
-            <button
-              type="button"
-              class="flex-1 px-4 py-2.5 bg-background text-foreground rounded-lg border border-border font-medium transition-colors hover:bg-muted hover:text-muted-foreground cursor-pointer"
-              onclick={cancelEdit}
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
-      </form>
     </div>
-  </div>
-{/if}
+  </form>
+</Modal>

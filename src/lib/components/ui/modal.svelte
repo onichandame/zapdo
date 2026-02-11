@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { onMount, onDestroy } from "svelte";
   import type { HTMLAttributes } from "svelte/elements";
   import type { Snippet } from "svelte";
   import Card from "./card.svelte";
@@ -116,4 +115,3 @@
     </div>
   </div>
 {/if}
-
