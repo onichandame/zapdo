@@ -1,26 +1,25 @@
 <script lang="ts">
-  import {
-    Plus,
-    Calendar,
-    Tag,
-    CheckCircle,
-    Circle,
-    Clock,
-    X,
-  } from "phosphor-svelte";
+  import { Calendar, CheckCircle, Circle, Clock, X } from "phosphor-svelte";
   import { deserialize } from "$app/forms";
   import { goto, invalidateAll } from "$app/navigation";
   import type { Attachment } from "svelte/attachments";
   import { decryptWithAesGcm, encryptWithAesGcm } from "$lib/crypto.js";
   import { projectStore } from "$lib/stores/project.js";
+  import Button from "$lib/components/ui/button.svelte";
+  import Card from "$lib/components/ui/card.svelte";
+  import Input from "$lib/components/ui/input.svelte";
+  import Label from "$lib/components/ui/label.svelte";
+  import Select from "$lib/components/ui/select.svelte";
+  import Textarea from "$lib/components/ui/textarea.svelte";
 
   const { data } = $props();
 
   // Use optional chaining to safely access data properties
   let tasks = $derived(data.tasks || []);
   let decryptedTasks = $state<typeof tasks>([]);
-  let filterStatus = $derived<typeof data.statusFilter | "all">(
-    data.statusFilter || "all",
+  type TaskStatus = "pending" | "in_progress" | "completed" | "cancelled";
+  let filterStatus = $derived<TaskStatus | "all">(
+    (data.statusFilter as TaskStatus | "all") || "all",
   );
   let searchQuery = $derived(data.searchQuery || "");
   let isCreating = $state(false);
@@ -105,13 +104,6 @@
       };
     }
   });
-
-  interface ActionResult {
-    type: "success" | "failure" | "redirect" | "error";
-    location?: string;
-    error?: any;
-    data?: any;
-  }
 
   async function handleCreateTask(e: SubmitEvent) {
     e.preventDefault();
@@ -218,16 +210,6 @@
     };
     return colors[priority] || "#3b82f6";
   }
-
-  function getStatusColor(status: string): string {
-    const colors: Record<string, string> = {
-      pending: "#94a3b8",
-      in_progress: "#3b82f6",
-      completed: "#22c55e",
-      cancelled: "#ef4444",
-    };
-    return colors[status] || "#94a3b8";
-  }
 </script>
 
 <div class="page text-foreground">
@@ -235,101 +217,106 @@
     <div class="header-left flex flex-col gap-1">
       <h1 class="title text-3xl font-bold m-0 text-foreground">Tasks</h1>
     </div>
-    <button
-      class="add-button flex items-center gap-2 px-5 py-2.5 bg-primary text-primary-foreground rounded-lg font-semibold cursor-pointer transition-opacity hover:opacity-90 border-none"
-      onclick={showCreateDialog}
-    >
-      <Plus size={20} />
-      <span>Add Task</span>
-    </button>
+    <div>
+      <Button variant="primary" size="sm" onclick={showCreateDialog}>
+        Add Task
+      </Button>
+    </div>
   </header>
 
-  <div class="stats-row grid grid-cols-4 gap-4 mb-8">
-    <div
-      class="stat-card flex items-center gap-3 p-4 bg-primary text-primary-foreground rounded-lg border border-border shadow-card"
-    >
+  <div
+    class="stats-row grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8"
+  >
+    <Card variant="stat">
       <div
         class="stat-icon pending flex items-center justify-center w-10 h-10 rounded-md bg-[#94a3b820] text-[#94a3b8]"
       >
-        <Circle size={20} />
+        <Circle size={20} weight="duotone" />
       </div>
       <div class="stat-info flex flex-col">
-        <span class="stat-value text-2xl font-bold text-primary-foreground"
+        <span class="stat-value text-2xl font-bold text-foreground"
           >{pendingCount}</span
         >
-        <span class="stat-label text-xs">Pending</span>
+        <span class="stat-label text-sm font-medium text-muted-foreground"
+          >Pending</span
+        >
       </div>
-    </div>
-    <div
-      class="stat-card flex items-center gap-3 p-4 bg-primary text-primary-foreground rounded-lg border border-border shadow-card"
-    >
+    </Card>
+    <Card variant="stat">
       <div
         class="stat-icon progress flex items-center justify-center w-10 h-10 rounded-md bg-[#3b82f620] text-[#3b82f6]"
       >
-        <Clock size={20} />
+        <Clock size={20} weight="duotone" />
       </div>
       <div class="stat-info flex flex-col">
-        <span class="stat-value text-2xl font-bold text-primary-foreground"
+        <span class="stat-value text-2xl font-bold text-foreground"
           >{inProgressCount}</span
         >
-        <span class="stat-label text-xs">In Progress</span>
+        <span class="stat-label text-sm font-medium text-muted-foreground"
+          >In Progress</span
+        >
       </div>
-    </div>
-    <div
-      class="stat-card flex items-center gap-3 p-4 bg-primary text-primary-foreground rounded-lg border border-border shadow-card"
-    >
+    </Card>
+    <Card variant="stat">
       <div
         class="stat-icon completed flex items-center justify-center w-10 h-10 rounded-md bg-[#22c55e20] text-[#22c55e]"
       >
-        <CheckCircle size={20} />
+        <CheckCircle size={20} weight="duotone" />
       </div>
       <div class="stat-info flex flex-col">
-        <span class="stat-value text-2xl font-bold text-primary-foreground"
+        <span class="stat-value text-2xl font-bold text-foreground"
           >{completedCount}</span
         >
-        <span class="stat-label text-xs">Completed</span>
+        <span class="stat-label text-sm font-medium text-muted-foreground"
+          >Completed</span
+        >
       </div>
-    </div>
-    <div
-      class="stat-card total flex items-center gap-3 p-4 bg-primary text-primary-foreground rounded-lg border border-border shadow-card"
-    >
+    </Card>
+    <Card variant="stat">
       <div class="stat-info flex flex-col">
-        <span class="stat-value text-2xl font-bold text-primary-foreground"
+        <span class="stat-value text-2xl font-bold text-foreground"
           >{tasks.length}</span
         >
-        <span class="stat-label text-xs">Total Tasks</span>
+        <span class="stat-label text-sm font-medium text-muted-foreground"
+          >Total Tasks</span
+        >
       </div>
-    </div>
+    </Card>
   </div>
 
-  <div class="filters flex justify-between gap-4 mb-6">
+  <div class="filters flex flex-col sm:flex-row justify-between gap-4 mb-6">
     <div class="search-box flex-1 max-w-[300px]">
-      <input
+      <Input
         type="text"
         placeholder="Search tasks..."
-        bind:value={searchQuery}
-        class="search-input w-full px-4 py-2.5 bg-primary text-primary-foreground rounded-lg border border-border text-sm placeholder:text-muted-foreground"
+        value={searchQuery}
+        oninput={(e) => (searchQuery = (e.target as HTMLInputElement).value)}
       />
     </div>
     <div class="filter-group flex gap-3">
-      <select
-        bind:value={filterStatus}
-        class="filter-select px-4 py-2.5 bg-primary text-primary-foreground rounded-lg border border-border text-sm cursor-pointer"
+      <Select
+        value={filterStatus}
+        oninput={(e) =>
+          (filterStatus = (e.target as HTMLSelectElement)
+            .value as typeof filterStatus)}
       >
         <option value="all">All Status</option>
         <option value="pending">Pending</option>
         <option value="in_progress">In Progress</option>
         <option value="completed">Completed</option>
         <option value="cancelled">Cancelled</option>
-      </select>
+      </Select>
     </div>
   </div>
 
   <div class="task-list flex flex-col gap-3">
     {#each decryptedTasks as task (task.id)}
-      <div
-        class="task-card group flex items-start gap-4 p-5 bg-primary text-primary-foreground rounded-lg border border-border shadow-card transition-all hover:bg-background hover:border-muted hover:text-foreground hover:shadow-none"
-        class:completed={task.status === "completed"}
+      <Card
+        variant="feature"
+        class="group flex items-start gap-4 p-5 transition-all hover:shadow-md {task.status ===
+        'completed'
+          ? 'completed'
+          : ''}"
       >
         <button
           class="status-toggle flex-shrink-0 bg-none border-none cursor-pointer p-0 flex items-center justify-center w-7 h-7 mt-0.5"
@@ -337,14 +324,15 @@
         >
           {#if task.status === "completed"}
             <span class="icon-completed text-[#22c55e]"
-              ><CheckCircle size={22} /></span
+              ><CheckCircle size={22} weight="duotone" /></span
             >
           {:else if task.status === "in_progress"}
-            <span class="icon-progress text-[#3b82f6]"><Clock size={22} /></span
+            <span class="icon-progress text-[#3b82f6]"
+              ><Clock size={22} weight="duotone" /></span
             >
           {:else}
             <span class="icon-pending text-muted-foreground"
-              ><Circle size={22} /></span
+              ><Circle size={22} weight="duotone" /></span
             >
           {/if}
         </button>
@@ -352,7 +340,7 @@
         <div class="task-content flex-1 min-w-0">
           <div class="task-header flex items-start justify-between gap-4 mb-1">
             <h3
-              class="task-title text-base font-semibold m-0 text-primary-foreground"
+              class="task-title text-base font-semibold m-0 text-foreground"
               class:line-through={task.status === "completed"}
             >
               {task.title}
@@ -378,27 +366,9 @@
               class="due-date flex items-center gap-1 text-xs text-muted-foreground"
               class:text-[#ef4444]={isOverdue(task)}
             >
-              <Calendar size={14} />
+              <Calendar size={14} weight="duotone" />
               {formatDate(task.dueDate)}
             </span>
-            {#if task.tags?.length > 0}
-              <div class="tags flex items-center gap-2">
-                {#each task.tags.slice(0, 3) as tag}
-                  <span
-                    class="tag flex items-center gap-1 text-xs text-muted-foreground"
-                  >
-                    <Tag size={12} />
-                    {tag.tag}
-                  </span>
-                {/each}
-                {#if task.tags.length > 3}
-                  <span
-                    class="tag more flex items-center gap-1 text-xs font-semibold text-muted-foreground"
-                    >+{task.tags.length - 3}</span
-                  >
-                {/if}
-              </div>
-            {/if}
           </div>
         </div>
 
@@ -407,15 +377,15 @@
           onclick={() => deleteTask(task.id)}
           aria-label="Delete task"
         >
-          <X size={18} />
+          <X size={18} weight="duotone" />
         </button>
-      </div>
+      </Card>
     {:else}
       <div
         class="empty-state flex flex-col items-center justify-center py-16 px-8 text-center"
       >
         <span class="empty-icon text-muted-foreground mb-4"
-          ><Circle size={48} /></span
+          ><Circle size={48} weight="duotone" /></span
         >
         <h3 class="text-lg font-semibold mb-2 text-foreground">
           No tasks found
@@ -442,20 +412,15 @@
             onclick={cancelCreate}
             aria-label="Close dialog"
           >
-            <X size={20} />
+            <X size={20} weight="duotone" />
           </button>
         </div>
 
         <form method="POST" action="?/createTask" onsubmit={handleCreateTask}>
           <div class="space-y-4">
             <div>
-              <label
-                for="create-title"
-                class="block text-sm font-medium text-foreground mb-1"
-              >
-                Task Title
-              </label>
-              <input
+              <Label for="create-title">Task Title</Label>
+              <Input
                 type="text"
                 id="create-title"
                 name="title"
@@ -463,94 +428,69 @@
                 oninput={(e) =>
                   (createTaskTitle = (e.target as HTMLInputElement).value)}
                 required
-                class="w-full px-3 py-2 bg-primary text-primary-foreground border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
                 placeholder="Enter task title"
               />
             </div>
 
             <div>
-              <label
-                for="create-description"
-                class="block text-sm font-medium text-foreground mb-1"
-              >
-                Description (optional)
-              </label>
-              <textarea
+              <Label for="create-description">Description (optional)</Label>
+              <Textarea
                 id="create-description"
                 name="description"
                 value={createTaskDescription}
                 oninput={(e) =>
                   (createTaskDescription = (e.target as HTMLTextAreaElement)
                     .value)}
-                class="w-full px-3 py-2 bg-primary text-primary-foreground border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-                rows="3"
+                rows={3}
                 placeholder="Describe your task"
-              ></textarea>
+              />
             </div>
 
             <div class="grid grid-cols-2 gap-4">
               <div>
-                <label
-                  for="create-status"
-                  class="block text-sm font-medium text-foreground mb-1"
-                >
-                  Status
-                </label>
-                <select
+                <Label for="create-status">Status</Label>
+                <Select
                   id="create-status"
                   name="status"
                   value={createTaskStatus}
                   oninput={(e) =>
                     (createTaskStatus = (e.target as HTMLSelectElement).value)}
-                  class="w-full px-3 py-2 bg-primary text-primary-foreground border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
                 >
                   <option value="pending">Pending</option>
                   <option value="in_progress">In Progress</option>
                   <option value="completed">Completed</option>
                   <option value="cancelled">Cancelled</option>
-                </select>
+                </Select>
               </div>
 
               <div>
-                <label
-                  for="create-priority"
-                  class="block text-sm font-medium text-foreground mb-1"
-                >
-                  Priority
-                </label>
-                <select
+                <Label for="create-priority">Priority</Label>
+                <Select
                   id="create-priority"
                   name="priority"
-                  value={createTaskPriority}
+                  value={createTaskPriority.toString()}
                   oninput={(e) =>
                     (createTaskPriority = parseInt(
                       (e.target as HTMLSelectElement).value,
                     ))}
-                  class="w-full px-3 py-2 bg-primary text-primary-foreground border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
                 >
                   <option value="3">Urgent</option>
                   <option value="2">High</option>
                   <option value="1">Medium</option>
                   <option value="0">Low</option>
-                </select>
+                </Select>
               </div>
             </div>
 
             <div>
-              <label
-                for="create-due-date"
-                class="block text-sm font-medium text-foreground mb-1"
-              >
-                Due Date (optional)
-              </label>
-              <input
+              <Label for="create-due-date">Due Date (optional)</Label>
+              <Input
                 type="date"
                 id="create-due-date"
                 name="dueDate"
                 value={createTaskDueDate}
                 oninput={(e) =>
                   (createTaskDueDate = (e.target as HTMLInputElement).value)}
-                class="w-full px-3 py-2 bg-primary text-primary-foreground border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
               />
             </div>
 
@@ -561,19 +501,10 @@
             {/if}
 
             <div class="flex gap-3">
-              <button
-                type="submit"
-                class="flex-1 px-4 py-2.5 bg-accent text-accent-foreground rounded-lg border border-border font-medium transition-colors hover:bg-primary hover:text-primary-foreground cursor-pointer"
+              <Button variant="primary" type="submit">Create Task</Button>
+              <Button variant="secondary" type="button" onclick={cancelCreate}
+                >Cancel</Button
               >
-                Create Task
-              </button>
-              <button
-                type="button"
-                class="flex-1 px-4 py-2.5 bg-background text-foreground rounded-lg border border-border font-medium transition-colors hover:bg-muted hover:text-muted-foreground cursor-pointer"
-                onclick={cancelCreate}
-              >
-                Cancel
-              </button>
             </div>
           </div>
         </form>
@@ -581,9 +512,3 @@
     </div>
   {/if}
 </div>
-
-<style>
-  .task-card.completed {
-    opacity: 0.7;
-  }
-</style>

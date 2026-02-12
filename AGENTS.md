@@ -38,6 +38,21 @@ The application uses a modern, professional color palette designed for privacy-f
 - `--color-popover` (`#ffffff`): Dropdown menus, popovers, tooltips
 - `--color-popover-foreground` (`#1e293b`): Text on popover surfaces
 
+### Radius Scale
+
+- `--radius-xs` (`0.125rem`): Extra small border radius
+- `--radius-sm` (`0.25rem`): Small border radius  
+- `--radius-md` (`0.375rem`): Medium border radius (default for inputs/cards)
+- `--radius-lg` (`0.5rem`): Large border radius
+- `--radius-xl` (`0.75rem`): Extra large border radius
+- `--radius-2xl` (`1rem`): 2x extra large border radius
+- `--radius-3xl` (`1.5rem`): 3x extra large border radius
+- `--radius-4xl` (`2rem`): 4x extra large border radius
+
+### Shadow Scale
+
+- `--shadow-card` (`0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)`): Card shadow for depth and elevation
+
 This palette provides excellent accessibility (12.7:1 contrast ratio for primary text) and follows 2025-2026 design trends for privacy-focused productivity applications.
 
 # Typography
@@ -90,3 +105,55 @@ You MUST use this tool whenever writing Svelte code before sending it to the use
 
 Generates a Svelte Playground link with the provided code.
 After completing the code, ask the user if they want a playground link. Only call this tool after user confirmation and NEVER if code was written to files in their project.
+
+# UI Components
+
+## Component Usage Guide
+
+The application uses a consistent set of UI components built with Svelte 5 runes and Tailwind CSS. All components support the `class` prop for additional styling and spread remaining props to the underlying HTML element.
+
+### Button
+**Usage**: Primary actions, secondary actions, destructive actions, ghost buttons, and text links
+- **Variants**: `primary` (default), `secondary`, `destructive`, `ghost`, `link`
+- **Sizes**: `default` (default), `sm`, `lg`
+- **Example**: `<Button variant="primary" size="lg">Submit</Button>`
+
+### Card
+**Usage**: Containers for content grouping with consistent styling
+- **Variants**: `form` (default), `modal`, `feature`, `stat`, `project`
+- **Example**: `<Card variant="project">Project Content</Card>`
+
+### Input
+**Usage**: Text input fields with consistent styling and focus states
+- **Props**: Standard HTML input attributes + `class`
+- **Example**: `<Input type="text" placeholder="Enter text" />`
+
+### Label
+**Usage**: Form labels with proper spacing and typography
+- **Props**: Standard HTML label attributes + `class`
+- **Example**: `<Label for="email">Email Address</Label>`
+
+### Select
+**Usage**: Dropdown select elements with consistent styling
+- **Props**: Standard HTML select attributes + `class`
+- **Example**: `<Select><option value="1">Option 1</option></Select>`
+
+### Textarea
+**Usage**: Multi-line text input with consistent styling (non-resizable by default)
+- **Props**: Standard HTML textarea attributes + `class`
+- **Example**: `<Textarea placeholder="Enter description" rows="4" />`
+
+### Modal
+**Usage**: Dialog overlays for focused interactions
+- **Props**: `open` (boolean), `onClose` (function), `title` (string, optional), `showCloseButton` (boolean, default: true)
+- **Example**: `<Modal open={isOpen} onClose={() => setIsOpen(false)} title="Create Project">{content}</Modal>`
+
+### Alert
+**Usage**: Inline notifications and messages
+- **Variants**: `info` (default), `error`
+- **Example**: `<Alert variant="error">Something went wrong!</Alert>`
+
+### Error
+**Usage**: Inline error text with consistent styling (typically used with form fields)
+- **Props**: Standard HTML span attributes + `class`
+- **Example**: `<Error>Field is required</Error>`
