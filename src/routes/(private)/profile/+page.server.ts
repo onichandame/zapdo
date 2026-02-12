@@ -1,5 +1,4 @@
-export const load = async ({ locals }) => {
+export const load = async ({ }) => {
   return {
-    user: locals.session!.user
   };
 };
