@@ -210,6 +210,16 @@
     };
     return colors[priority] || "#3b82f6";
   }
+
+  function getPriorityLabel(priority: number): string {
+    const labels: Record<number, string> = {
+      3: "Urgent",
+      2: "High",
+      1: "Medium",
+      0: "Low",
+    };
+    return labels[priority] || "Medium";
+  }
 </script>
 
 <div class="page text-foreground">
@@ -350,7 +360,7 @@
                 class="priority-badge px-1.5 py-0.5 rounded-full text-[0.625rem] font-semibold uppercase text-white"
                 style="background-color: {getPriorityColor(task.priority)}"
               >
-                {task.priority}
+                {getPriorityLabel(task.priority)}
               </span>
             </div>
           </div>
@@ -372,13 +382,16 @@
           </div>
         </div>
 
-        <button
-          class="delete-button flex-shrink-0 bg-none border-none text-muted-foreground cursor-pointer p-2 rounded-md transition-all hover:bg-[rgba(239,68,68,0.1)] hover:text-[#ef4444] opacity-0 group-hover:opacity-100"
-          onclick={() => deleteTask(task.id)}
-          aria-label="Delete task"
-        >
-          <X size={18} weight="duotone" />
-        </button>
+        <div>
+          <Button
+            variant="ghost"
+            class="delete-button flex-shrink-0 bg-transparent border-none text-muted-foreground p-2 rounded-md transition-all hover:bg-[rgba(239,68,68,0.1)] hover:text-[#ef4444] opacity-0 group-hover:opacity-100"
+            onclick={() => deleteTask(task.id)}
+            aria-label="Delete task"
+          >
+            <X size={18} weight="duotone" />
+          </Button>
+        </div>
       </Card>
     {:else}
       <div
