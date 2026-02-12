@@ -1,6 +1,17 @@
 <script lang="ts">
   import favicon from "$lib/assets/favicon.svg";
-  import { UserCircle, Warehouse } from "phosphor-svelte";
+  import {
+    UserCircle,
+    Warehouse,
+    Folder,
+    Star,
+    Rocket,
+    ChartBar,
+    Lightbulb,
+    Target,
+    Book,
+    GearSix,
+  } from "phosphor-svelte";
   import { page } from "$app/state";
   import { getStorageItem, STORAGE_KEYS } from "$lib/storage";
   import { goto } from "$app/navigation";
@@ -11,9 +22,10 @@
     importEcToKey,
   } from "$lib/crypto";
   import { kekStore } from "$lib/stores/kekStore";
-  import { dekStore } from "$lib/stores/dekStore";
+  import { projectsStore } from "$lib/stores/project.js";
 
   let { children, data } = $props();
+  let projectsReady = $state(false);
 
   (async () => {
     const kekPrivateStr = getStorageItem(STORAGE_KEYS.KEK_PRIVATE_KEY, ``);
@@ -33,13 +45,24 @@
         $kekStore,
       );
       const dekKey = await importAesKey(decryptedDekStr);
-      dekStore.update((old) => {
-        old[project.id] = dekKey;
+      const decryptedName = await decryptWithAesGcm(project.name, dekKey);
+      const decryptedDescription = project.description
+        ? await decryptWithAesGcm(project.description, dekKey)
+        : ``;
+      const decryptedProject = {
+        ...project,
+        name: decryptedName,
+        description: decryptedDescription,
+      };
+      projectsStore.update((old) => {
+        old.push({ dek: dekKey, project: decryptedProject });
         return old;
       });
     }
+    projectsReady = true;
   })().catch((e) => {
     console.error(e);
+    projectsReady = true; // Set to true even on error to show something
     // TODO: handle error display
   });
   function isActive(path: string): boolean {
@@ -56,30 +79,86 @@
     <div class="p-2 my-4">
       <img src={favicon} alt="ZapDo" width="28" height="28" class="w-7 h-7" />
     </div>
-    <nav class="flex-1 flex flex-col items-center space-y-2">
-      <a
-        href="/projects"
-        title="Projects"
-        class="p-2 rounded-md font-medium hover:bg-accent hover:text-accent-foreground transition-colors {isActive(
-          '/projects',
-        )
-          ? 'bg-accent text-accent-foreground'
-          : ''}"
-      >
-        <Warehouse size={20} weight="duotone" />
-      </a>
-      <a
-        href="/profile"
-        title="Profile"
-        class="p-2 rounded-md font-medium hover:bg-accent hover:text-accent-foreground transition-colors {isActive(
-          '/profile',
-        )
-          ? 'bg-accent text-accent-foreground'
-          : ''}"
-      >
-        <UserCircle size={20} weight="duotone" />
-      </a>
+    <nav class="flex-1 flex flex-col items-center space-y-2 overflow-y-auto">
+      {#each $projectsStore as item (item.project.id)}
+        <a
+          href={`/projects/${item.project.id}/tasks`}
+          title={item.project.name}
+          class="p-2 rounded-md font-medium hover:bg-accent hover:text-accent-foreground transition-colors {isActive(
+            `/projects/${item.project.id}`,
+          )
+            ? 'bg-accent text-accent-foreground'
+            : ''}"
+        >
+          {#if item.project.icon === "star"}
+            <Star
+              size={20}
+              weight="fill"
+              style={`color: ${item.project.color}`}
+            />
+          {:else if item.project.icon === "rocket"}
+            <Rocket
+              size={20}
+              weight="fill"
+              style={`color: ${item.project.color}`}
+            />
+          {:else if item.project.icon === "chart"}
+            <ChartBar
+              size={20}
+              weight="fill"
+              style={`color: ${item.project.color}`}
+            />
+          {:else if item.project.icon === "lightbulb"}
+            <Lightbulb
+              size={20}
+              weight="fill"
+              style={`color: ${item.project.color}`}
+            />
+          {:else if item.project.icon === "target"}
+            <Target
+              size={20}
+              weight="fill"
+              style={`color: ${item.project.color}`}
+            />
+          {:else if item.project.icon === "book"}
+            <Book
+              size={20}
+              weight="fill"
+              style={`color: ${item.project.color}`}
+            />
+          {:else if item.project.icon === "gear"}
+            <GearSix
+              size={20}
+              weight="fill"
+              style={`color: ${item.project.color}`}
+            />
+          {:else if item.project.icon === "folder"}
+            <Folder
+              size={20}
+              weight="fill"
+              style={`color: ${item.project.color}`}
+            />
+          {:else}
+            <Warehouse
+              size={20}
+              weight="fill"
+              style={`color: ${item.project.color}`}
+            />
+          {/if}
+        </a>
+      {/each}
     </nav>
+    <a
+      href="/profile"
+      title="Profile"
+      class="p-2 rounded-md font-medium hover:bg-accent hover:text-accent-foreground transition-colors {isActive(
+        '/profile',
+      )
+        ? 'bg-accent text-accent-foreground'
+        : ''}"
+    >
+      <UserCircle size={20} weight="duotone" />
+    </a>
   </aside>
 
   <main class="flex-1 bg-background text-foreground">

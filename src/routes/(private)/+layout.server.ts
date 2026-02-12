@@ -5,7 +5,6 @@ export const load = async ({ locals, }) => {
   if (!locals.session) {
     throw redirect(302, '/login');
   }
-  console.log(locals.session.user.kekPublicKey)
 
   if (!locals.session.user.kekPublicKey) throw redirect(302, `/onboarding`)
 

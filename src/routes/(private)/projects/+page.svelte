@@ -10,12 +10,6 @@
     Book,
     GearSix,
   } from "phosphor-svelte";
-  import { invalidateAll } from "$app/navigation";
-  import {
-    decryptWithAesGcm,
-  } from "$lib/crypto";
-  import type * as schema from "$lib/server/db/schema";
-  import { dekStore } from "$lib/stores/dekStore";
   import Button from "$lib/components/ui/button.svelte";
   import Card from "$lib/components/ui/card.svelte";
   import Modal from "$lib/components/ui/modal.svelte";
@@ -24,12 +18,9 @@
   import Select from "$lib/components/ui/select.svelte";
   import Label from "$lib/components/ui/label.svelte";
   import Error from "$lib/components/ui/error.svelte";
+  import { projectsStore } from "$lib/stores/project.js";
 
   let { data } = $props();
-
-  // Decrypted projects state
-  let decryptedProjects = $state<schema.Project[]>([]);
-  let isDecrypting = $state(true);
 
   let isCreating = $state(false);
   let createProjectName = $state("");
@@ -68,84 +59,13 @@
       };
     }
   });
-
-  // Decrypt projects when data or DEKs change
-  $effect(() => {
-    if (!data?.projects || data.projects.length === 0) {
-      decryptedProjects = [];
-      isDecrypting = false;
-      return;
-    }
-
-    isDecrypting = true;
-
-    // Create a function to handle async decryption
-    const decryptProjects = async () => {
-      const deks = $dekStore;
-      const newDecryptedProjects: typeof data.projects = [];
-      const newDecryptionErrors: Record<string, string> = {};
-
-      for (const project of data!.projects) {
-        try {
-          const dek = deks[project.id];
-          if (!dek) {
-            newDecryptionErrors[project.id] = "DEK not available";
-            // Create a copy of the original project with error message
-            const errorProject = {
-              ...project,
-              name: "[Decryption Error: DEK missing]",
-              description: "",
-            };
-            newDecryptedProjects.push(errorProject);
-            continue;
-          }
-
-          const decryptedName = await decryptWithAesGcm(project.name, dek);
-          const decryptedDescription = project.description
-            ? await decryptWithAesGcm(project.description, dek)
-            : ``;
-
-          const decryptedProject = {
-            ...project,
-            name: decryptedName,
-            description: decryptedDescription,
-          };
-          newDecryptedProjects.push(decryptedProject);
-        } catch (error) {
-          console.error(`Failed to decrypt project ${project.id}:`, error);
-          newDecryptionErrors[project.id] = "Decryption failed";
-          // Create a copy of the original project with error message
-          const errorProject = {
-            ...project,
-            name: "[Decryption Error]",
-            description: "",
-          };
-          newDecryptedProjects.push(errorProject);
-        }
-      }
-
-      decryptedProjects = newDecryptedProjects;
-      isDecrypting = false;
-    };
-
-    decryptProjects().catch(console.error);
-  });
 </script>
 
 <header class="mb-8">
   <h1 class="text-3xl font-bold text-foreground mb-2">Projects</h1>
 </header>
 
-{#if isDecrypting}
-  <div class="col-span-full text-center py-12">
-    <div class="flex items-center justify-center gap-2">
-      <div
-        class="w-6 h-6 border-2 border-current border-t-transparent rounded-full animate-spin"
-      ></div>
-      <span class="text-muted-foreground">Decrypting your projects...</span>
-    </div>
-  </div>
-{:else if decryptedProjects.length === 0}
+{#if $projectsStore.length === 0}
   {#if data?.projects && data.projects.length === 0}
     <div class="col-span-full text-center py-12">
       <div class="text-muted-foreground mb-4">No projects yet</div>
@@ -184,7 +104,7 @@
         Create New Project
       </h2>
     </Card>
-    {#each decryptedProjects as project (project.id)}
+    {#each $projectsStore.map((v) => v.project) as project (project.id)}
       <a href={`/projects/${project.id}/tasks`} class="no-underline">
         <Card
           variant="project"
@@ -192,52 +112,43 @@
           role="button"
           tabindex={0}
         >
-        <div
-          class="w-12 h-12 rounded-md flex items-center justify-center mb-4"
-          style="background-color: {project.color}20; color: {project.color}"
-        >
-          {#if project.icon === "star"}
-            <Star size={24} weight="fill" />
-          {:else if project.icon === "rocket"}
-            <Rocket size={24} weight="fill" />
-          {:else if project.icon === "chart"}
-            <ChartBar size={24} weight="fill" />
-          {:else if project.icon === "lightbulb"}
-            <Lightbulb size={24} weight="fill" />
-          {:else if project.icon === "target"}
-            <Target size={24} weight="fill" />
-          {:else if project.icon === "book"}
-            <Book size={24} weight="fill" />
-          {:else if project.icon === "gear"}
-            <GearSix size={24} weight="fill" />
-          {:else}
-            <Folder size={24} weight="fill" />
-          {/if}
-        </div>
+          <div
+            class="w-12 h-12 rounded-md flex items-center justify-center mb-4"
+            style="background-color: {project.color}20; color: {project.color}"
+          >
+            {#if project.icon === "star"}
+              <Star size={24} weight="fill" />
+            {:else if project.icon === "rocket"}
+              <Rocket size={24} weight="fill" />
+            {:else if project.icon === "chart"}
+              <ChartBar size={24} weight="fill" />
+            {:else if project.icon === "lightbulb"}
+              <Lightbulb size={24} weight="fill" />
+            {:else if project.icon === "target"}
+              <Target size={24} weight="fill" />
+            {:else if project.icon === "book"}
+              <Book size={24} weight="fill" />
+            {:else if project.icon === "gear"}
+              <GearSix size={24} weight="fill" />
+            {:else}
+              <Folder size={24} weight="fill" />
+            {/if}
+          </div>
 
-        <div class="flex-1 min-w-0">
-          <h2 class="text-xl font-semibold text-foreground m-0 truncate">
-            {project.name}
-          </h2>
-          {#if project.description}
-            <p class="text-sm mt-1 text-muted-foreground line-clamp-2">
-              {project.description}
-            </p>
-          {/if}
-        </div>
-      </Card>
-    </a>
-  {/each}
+          <div class="flex-1 min-w-0">
+            <h2 class="text-xl font-semibold text-foreground m-0 truncate">
+              {project.name}
+            </h2>
+            {#if project.description}
+              <p class="text-sm mt-1 text-muted-foreground line-clamp-2">
+                {project.description}
+              </p>
+            {/if}
+          </div>
+        </Card>
+      </a>
+    {/each}
   </div>
-
-  <Button
-    variant="secondary"
-    class="bg-primary text-primary-foreground hover:bg-accent hover:text-accent-foreground"
-    onclick={() => showCreateDialog()}
-  >
-    <Plus size={20} />
-    Create New Project
-  </Button>
 {/if}
 
 <Modal open={isCreating} onClose={cancelCreate} title="Create Project">
