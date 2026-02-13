@@ -84,10 +84,10 @@
         <a
           href={`/projects/${item.project.id}/tasks`}
           title={item.project.name}
-          class="p-2 rounded-md font-medium hover:bg-accent hover:text-accent-foreground transition-colors {isActive(
+          class="p-2 rounded-md font-medium hover:bg-accent/20 hover:text-accent-foreground transition-colors {isActive(
             `/projects/${item.project.id}`,
           )
-            ? 'bg-accent text-accent-foreground'
+            ? 'bg-accent/20 text-accent-foreground'
             : ''}"
         >
           {#if item.project.icon === "star"}
@@ -151,10 +151,10 @@
     <a
       href="/profile"
       title="Profile"
-      class="p-2 rounded-md font-medium hover:bg-accent hover:text-accent-foreground transition-colors {isActive(
+      class="p-2 rounded-md font-medium hover:bg-accent/20 hover:text-accent-foreground transition-colors {isActive(
         '/profile',
       )
-        ? 'bg-accent text-accent-foreground'
+        ? 'bg-accent/20 text-accent-foreground'
         : ''}"
     >
       <UserCircle size={20} weight="duotone" />
