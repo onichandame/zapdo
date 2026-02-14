@@ -4,7 +4,7 @@ import { eq } from 'drizzle-orm';
 
 export const load = async ({ locals }) => {
   if (!locals.session) {
-    return {}
+    throw redirect(302, `/login`)
   }
 
   if (locals.session.user.kekPublicKey) throw redirect(302, `/projects`)

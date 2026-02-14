@@ -11,6 +11,7 @@
     Target,
     Book,
     GearSix,
+    Gear,
   } from "phosphor-svelte";
   import { page } from "$app/state";
   import { getStorageItem, STORAGE_KEYS } from "$lib/storage";
@@ -72,9 +73,9 @@
 
 <svelte:head><link rel="icon" href={favicon} /></svelte:head>
 
-<div class="flex min-h-screen">
+<div class="flex h-screen overflow-hidden">
   <aside
-    class="w-16 bg-card text-foreground flex flex-col items-center py-4 border-r border-border"
+    class="w-16 h-full bg-card text-foreground flex flex-col items-center py-4 border-r border-border flex-shrink-0"
   >
     <div class="p-2 my-4">
       <img src={favicon} alt="ZapDo" width="28" height="28" class="w-7 h-7" />
@@ -149,19 +150,19 @@
       {/each}
     </nav>
     <a
-      href="/profile"
-      title="Profile"
-      class="p-2 rounded-md font-medium hover:bg-accent/20 hover:text-accent-foreground transition-colors {isActive(
-        '/profile',
+      href="/settings"
+      title="Settings"
+      class="p-2 rounded-md font-medium hover:bg-accent/20 transition-colors {isActive(
+        '/settings',
       )
-        ? 'bg-accent/20 text-accent-foreground'
-        : ''}"
+        ? 'bg-accent/20'
+        : 'text-muted-foreground'}"
     >
-      <UserCircle size={20} weight="duotone" />
+      <Gear size={20} weight="fill" class={isActive('/settings') ? 'text-accent' : ''} />
     </a>
   </aside>
 
-  <main class="flex-1 bg-background text-foreground">
+  <main class="flex-1 overflow-y-auto bg-background text-foreground">
     <div class="container mx-auto px-4 py-6 max-w-4xl">
       {@render children()}
     </div>
